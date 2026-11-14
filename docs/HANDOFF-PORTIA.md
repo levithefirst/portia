@@ -9,7 +9,7 @@ Rules for every step:
 
 Project ID: **portia-f1dbe** (already created). Firebase AI Logic on the Gemini Developer API and App Check with reCAPTCHA Enterprise were reported as already set up and enforced; items 2, 4 and 5 are verification steps in that case.
 
-Public app URL: **https://portia-eta.vercel.app**. Repo URL: https://github.com/levithefirst/portia (private until item 8).
+Public app URL: **https://askportia.vercel.app**. Repo URL: https://github.com/levithefirst/portia (private until item 8).
 
 ---
 
@@ -47,7 +47,7 @@ Public app URL: **https://portia-eta.vercel.app**. Repo URL: https://github.com/
    5. Deploy. Confirm `vercel.json` rewrites work: open `https://<domain>/privacy` directly; it must load the Privacy page, not a 404.
    6. Add the production domain to the reCAPTCHA key (item 5.2) if not already there, then redeploy.
    7. Smoke check in desktop Chrome: the page must **not** show "AI is not configured in this build". Load sample lease > Extract. Without Nano you should see the consent banner; accept, and the badge reads `Extract: IN_CLOUD`. Approve & check shows `Check: IN_CLOUD` and red/amber findings.
-   8. Record the public HTTPS URL at the top of this file and in `docs/DEVPOST.md` (replace `https://portia-eta.vercel.app`), by editing on GitHub.
+   8. Record the public HTTPS URL at the top of this file and in `docs/DEVPOST.md` (replace `https://askportia.vercel.app`), by editing on GitHub.
 
 7b. **Record the bundled Judge Mode verdict (one real cloud run).** The repo ships a placeholder `src/fixtures/sample-verdict.json` (`"recorded": false`). Until it is replaced, Judge Mode's cached fallback shows only the in-browser playbook rules and says so. Claude Code could not record it because the build environment has no Firebase keys.
    1. Open `https://<domain>/?judge=1&record=1` in desktop Chrome.
@@ -63,7 +63,7 @@ Public app URL: **https://portia-eta.vercel.app**. Repo URL: https://github.com/
 9. **Fluid only (not the Portia bot, not Claude Code).**
    1. Optional desktop setup for the on-device take: Chrome 139+ on desktop, enable `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input` (official) and search `chrome://flags` for "Gemma 4 for Built-in AI" (hackathon FAQ), restart, open Portia, click **Prepare on-device model** and wait for the download.
    2. Record the 3-minute-or-shorter English YouTube demo following `docs/DEMO-SCRIPT.md`. Upload early (processing can take hours), public or unlisted as Devpost requires.
-   3. In the Devpost testing instructions, give judges the Judge Mode link `https://portia-eta.vercel.app/?judge=1` (already in `docs/DEVPOST.md`).
+   3. In the Devpost testing instructions, give judges the Judge Mode link `https://askportia.vercel.app/?judge=1` (already in `docs/DEVPOST.md`).
    4. Submit on Devpost **before Mon 30 Nov 2026, 11:00 PM WAT** (= 2:00 PM PT = 5:00 PM EST; the FAQ says commits after the deadline are not evaluated) with the public repo URL, the YouTube URL, the app URL, platform **Web (Chrome)**, and the text in `docs/DEVPOST.md`. No agent submits or posts.
 
 ---
