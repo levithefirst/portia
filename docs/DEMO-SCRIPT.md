@@ -44,4 +44,5 @@ Prep: desktop Chrome 139+, flags enabled per README, Gemini Nano already downloa
 Notes:
 - Do not claim anything is illegal. Do not say Nano ran on the Pixel 7.
 - If Take A cannot get Nano ready, record it anyway with the consent path and say so; do not fake the ON_DEVICE badge.
+- Record with `?judge=1` so the result card shows `Verdict in ...s`. If the clip shows "Cached sample result (live check unavailable)", either say so on camera or re-take once the live check works; never present the cached result as live.
 - Keep total under 3:00 (only the first 3 minutes are judged).

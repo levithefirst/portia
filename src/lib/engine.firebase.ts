@@ -15,6 +15,14 @@ export const firebaseEngine: AiEngine = {
 
   willRunOnDevice,
 
+  async warmUp() {
+    const { extractModel } = getModels()
+    if ((await checkDeviceAvailability()) === 'available') {
+      // Already downloaded, so no user activation is needed to attach to it.
+      await extractModel.initializeDeviceModel()
+    }
+  },
+
   async extract(prompt, images) {
     const { extractModel } = getModels()
     const result =

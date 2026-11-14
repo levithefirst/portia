@@ -12,6 +12,12 @@ export interface AiEngine {
   /** Must be called from a user gesture. Resolves when the model is ready or not downloadable. */
   prepareDevice(onProgress: (value: number) => void): Promise<void>
   willRunOnDevice(prompt: string, mimeTypes: string[]): Promise<boolean>
+  /**
+   * Judge Mode pre-warm: initialise Firebase, App Check and both model
+   * instances, and attach to Gemini Nano only if it is already downloaded
+   * (a download would need a user gesture). Never blocks the page.
+   */
+  warmUp(): Promise<void>
   extract(prompt: string, images: ImagePart[]): Promise<{ text: string; source: SourceLabel }>
   check(prompt: string): Promise<{ text: string; source: SourceLabel }>
 }

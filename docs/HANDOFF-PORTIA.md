@@ -49,12 +49,22 @@ Public app URL: **TBD** (record here after item 7). Repo URL: https://github.com
    7. Smoke check in desktop Chrome: the page must **not** show "AI is not configured in this build". Load sample lease > Extract. Without Nano you should see the consent banner; accept, and the badge reads `Extract: IN_CLOUD`. Approve & check shows `Check: IN_CLOUD` and red/amber findings.
    8. Record the public HTTPS URL at the top of this file and in `docs/DEVPOST.md` (replace `<APP_URL>`), by editing on GitHub.
 
+7b. **Record the bundled Judge Mode verdict (one real cloud run).** The repo ships a placeholder `src/fixtures/sample-verdict.json` (`"recorded": false`). Until it is replaced, Judge Mode's cached fallback shows only the in-browser playbook rules and says so. Claude Code could not record it because the build environment has no Firebase keys.
+   1. Open `https://<domain>/?judge=1&record=1` in desktop Chrome.
+   2. Click **Load sample lease** and do not edit the text. Keep the playbook on **US-typical**.
+   3. Click **Extract fee map** (accept the consent banner if shown). On the review screen, do not edit anything. Click **Approve & check**.
+   4. Wait for the badge `Check: IN_CLOUD` (not `CACHED SAMPLE`). A "Record mode" box appears. Click **Download verdict fixture (sample-verdict.json)**.
+   5. Open the downloaded file and confirm `"recorded": true`, `"inferenceSource": "in_cloud"`, and that it contains only the fields `note`, `playbookId`, `model`, `recordedAt`, `rawText`, `approvedExtract`. It contains no keys or tokens.
+   6. On GitHub, open `src/fixtures/sample-verdict.json` on `main`, choose **Edit** (or upload), replace the contents with the downloaded file, and commit to `main` with the message `Record Judge Mode sample verdict`. Vercel redeploys automatically.
+   7. Check: open `https://<domain>/?judge=1` and confirm the app still loads.
+
 8. **Make the repo public, only after Fluid explicitly OKs it, and before the Devpost submit.** GitHub > `levithefirst/portia` > Settings > General > Danger Zone > Change visibility > Public. Then confirm the **Apache-2.0** license shows in the repo's **About** section (right sidebar). If it does not, check that `LICENSE` is on the default branch (`main`). Claude Code must not flip visibility.
 
 9. **Fluid only (not the Portia bot, not Claude Code).**
    1. Optional desktop setup for the on-device take: Chrome 139+ on desktop, enable `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input` (official) and search `chrome://flags` for "Gemma 4 for Built-in AI" (hackathon FAQ), restart, open Portia, click **Prepare on-device model** and wait for the download.
    2. Record the 3-minute-or-shorter English YouTube demo following `docs/DEMO-SCRIPT.md`. Upload early (processing can take hours), public or unlisted as Devpost requires.
-   3. Submit on Devpost **before Mon 30 Nov 2026, 11:00 PM WAT** (= 2:00 PM PT = 5:00 PM EST; the FAQ says commits after the deadline are not evaluated) with the public repo URL, the YouTube URL, the app URL, platform **Web (Chrome)**, and the text in `docs/DEVPOST.md`. No agent submits or posts.
+   3. In the Devpost testing instructions, give judges the Judge Mode link `<APP_URL>/?judge=1` (already in `docs/DEVPOST.md`).
+   4. Submit on Devpost **before Mon 30 Nov 2026, 11:00 PM WAT** (= 2:00 PM PT = 5:00 PM EST; the FAQ says commits after the deadline are not evaluated) with the public repo URL, the YouTube URL, the app URL, platform **Web (Chrome)**, and the text in `docs/DEVPOST.md`. No agent submits or posts.
 
 ---
 
@@ -63,6 +73,7 @@ Public app URL: **TBD** (record here after item 7). Repo URL: https://github.com
 | Item | Blocked on |
 | --- | --- |
 | Public HTTPS URL | items 3, 5, 7 |
+| Real recorded Judge Mode verdict (`src/fixtures/sample-verdict.json`) | item 7b (needs the live deploy) |
 | Live ON_DEVICE / IN_CLOUD run against `portia-f1dbe` | items 3, 5, 7 (or 6 for local) |
 | Public repo + license in About | item 8 (Fluid's OK) |
 | Video and Devpost submission | item 9 |

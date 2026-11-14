@@ -146,6 +146,8 @@ export interface CheckOutput {
   findings: DisplayFinding[]
   source: SourceLabel
   prompt: string
+  /** Raw model text, kept so Judge Mode can record the sample verdict fixture. */
+  raw: string
 }
 
 /** Sends ONLY the approved JSON (plus the public playbook rules) to the cloud check model. */
@@ -157,7 +159,7 @@ export async function runCheck(
 ): Promise<CheckOutput> {
   const prompt = buildCheckPrompt(approved, playbook, unsureFields)
   const { text, source } = await engine.check(prompt)
-  return { findings: parseFindings(text, playbook), source, prompt }
+  return { findings: parseFindings(text, playbook), source, prompt, raw: text }
 }
 
 const STATUSES: Status[] = ['RED', 'AMBER', 'GREEN']

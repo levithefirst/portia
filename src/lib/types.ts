@@ -58,7 +58,7 @@ export interface DisplayFinding extends Finding {
 }
 
 /** Normalised inference source label. The SDK value is lowercase ("on_device" / "in_cloud"). */
-export type SourceLabel = 'ON_DEVICE' | 'IN_CLOUD' | 'FIXTURE'
+export type SourceLabel = 'ON_DEVICE' | 'IN_CLOUD' | 'FIXTURE' | 'CACHED'
 
 export interface ImagePart {
   type: 'inlineData'

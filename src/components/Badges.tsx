@@ -5,12 +5,14 @@ const SOURCE_TEXT: Record<SourceLabel, string> = {
   ON_DEVICE: 'ON_DEVICE',
   IN_CLOUD: 'IN_CLOUD',
   FIXTURE: 'SAMPLE DATA',
+  CACHED: 'CACHED SAMPLE',
 }
 
 const SOURCE_HELP: Record<SourceLabel, string> = {
   ON_DEVICE: 'Ran on this device with Gemini Nano (result.response.inferenceSource)',
   IN_CLOUD: 'Ran in the cloud with Gemini via Firebase AI Logic (result.response.inferenceSource)',
   FIXTURE: 'Pre-recorded sample, no model was called',
+  CACHED: 'Bundled verdict for the sample lease, shown because the live cloud check was unavailable',
 }
 
 /** Visible inferenceSource badge shown after every model call. */

@@ -62,6 +62,15 @@ Key files:
 
 Under `PREFER_ON_DEVICE`, the SDK sends a request to the cloud whenever the on-device model is not ready (still downloading, not supported, or the browser has no Prompt API, as on Android Chrome or a Pixel 7). For a lease, that would silently ship the raw document while the UI implies privacy. Portia checks the same conditions the SDK checks (`LanguageModel` exists, `LanguageModel.availability()` is `"available"` with the same `createOptions`, images are JPEG/PNG) before every extract, and requires a click on "Send to cloud Gemini" otherwise. Consent is per document. Details in `docs/SDK-NOTES.md`.
 
+## Judge Mode (`?judge=1`)
+
+A reliability mode for evaluators, enabled per browser session with `?judge=1` (`?judge=0` turns it off). A banner says when it is on.
+
+- **Pre-warm on landing:** without waiting for a tap and without blocking the page (`requestIdleCallback`), Portia checks Gemini Nano availability and initialises Firebase, App Check and both AI Logic model instances. `initializeDeviceModel()` is called during pre-warm only if Nano is already downloaded; a download still needs a click, as Chrome requires.
+- **Timing:** the result card shows the core loop time, for example `Verdict in 4.2s, on-device + cloud (extract 1.2s + check 3.0s)`. Review time is excluded.
+- **Cached sample verdict:** for the **unmodified sample lease only** (sample text and/or sample photos, unchanged), if the live cloud check errors, is rate limited (429) or takes more than 8 seconds, Portia shows the bundled verdict labelled **"Cached sample result (live check unavailable)"** with a `Check: CACHED SAMPLE` badge, keeps retrying live in the background (4 more attempts with backoff), and swaps in the live result if it arrives. Any other document gets the normal error and retry, never a cached result.
+- The bundled verdict lives in `src/fixtures/sample-verdict.json` and is recorded from one real cloud run with `?judge=1&record=1` (see `docs/HANDOFF-PORTIA.md` item 7b). Until it is recorded, the file is a placeholder (`"recorded": false`) and the cached fallback shows only the in-browser playbook rule results, and says so.
+
 ## Run on-device in Chrome
 
 1. Chrome on desktop, version **139 or higher** (`chrome://settings/help`).
@@ -106,11 +115,11 @@ Portia has no server, no account and no database. When Gemini Nano is ready, the
 ## Tests
 
 ```bash
-npm test              # unit tests (vitest): privacy gate, payload contents, parsing, rules, PDF rejection
+npm test              # unit tests (vitest): privacy gate, payload contents, parsing, rules, PDF rejection, Judge Mode cache
 npm run test:smoke    # builds twice and drives Chromium with Playwright + axe-core
 ```
 
-The smoke test needs no keys and no Nano. Part A uses the production build without env vars (setup state, sample extract, rules, PDF rejection, print list, privacy route, dark mode, axe). Part B uses a `--mode e2e` build with a fake engine that behaves like a phone without Nano: it asserts no model call happens before consent, the badges, and that the check request carries the edited JSON and no lease text or images. The fake engine is compiled in only for `--mode e2e`.
+The smoke test needs no keys and no Nano. Part A uses the production build without env vars (setup state, sample extract, rules, PDF rejection, print list, privacy route, dark mode, axe). Part B uses a `--mode e2e` build with a fake engine that behaves like a phone without Nano: it asserts no model call happens before consent, the badges, and that the check request carries the edited JSON and no lease text or images. Part C is the Judge Mode 10-second loop: with the cloud check mocked to succeed, to fail with a 429, and to be slow (9 s), the sample loop must reach a verdict within 10 s, the cached label must appear on failure, the live result must be swapped in when it arrives, pre-warm must run before any tap, and a modified document must never get a cached result. The fake engine (`?fakeCheck=fail|slow`) is compiled in only for `--mode e2e`.
 
 To exercise the real cloud path locally, put real values in `.env`, run `npm run dev`, register the debug token, and use the app.
 

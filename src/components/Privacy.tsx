@@ -69,6 +69,12 @@ export function Privacy() {
           </li>
           <li>Your theme choice is saved in localStorage.</li>
           <li>
+            Judge Mode (<span className="font-mono text-sm">?judge=1</span>) sets a flag in sessionStorage for this tab and
+            initialises Firebase and App Check as soon as the page loads instead of on your first click. It sends no document
+            data. For the unmodified sample lease only, it can show a bundled sample verdict, clearly labelled, if the live check
+            is unavailable.
+          </li>
+          <li>
             Requests to Firebase AI Logic are protected by Firebase App Check with reCAPTCHA Enterprise, which evaluates the browser
             session to block abuse of the API.
           </li>

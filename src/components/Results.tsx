@@ -5,6 +5,7 @@ import { formatMoney, monthlyRent, sortFindings, totalMonthlyFees } from '../lib
 import type { DisplayFinding, LeaseExtract, SourceLabel, Status } from '../lib/types'
 import { SourceBadge, StatusPill } from './Badges'
 import { IconCopy, IconPrint } from './icons'
+import { verdictTimeText } from '../lib/judge'
 
 interface Props {
   findings: DisplayFinding[]
@@ -19,9 +20,29 @@ interface Props {
   onEdit: () => void
   onStartOver: () => void
   cloudReviewAvailable: boolean
+  cached: CachedInfo | null
+  cachedLabel: string
+  liveRetry: LiveRetry | null
+  timing: { extractMs: number | null; checkMs: number | null }
+  onDownloadFixture?: () => void
 }
 
 const ALL: Status[] = ['RED', 'AMBER', 'GREEN']
+
+export interface CachedInfo {
+  reason: string
+  hasRecordedCloud: boolean
+  recordedAt: string | null
+  /** The user edited the extract, so the cached cloud findings may not reflect the edits. */
+  edited: boolean
+}
+
+export interface LiveRetry {
+  attempt: number
+  total: number
+  active: boolean
+  swapped: boolean
+}
 
 export function Results(p: Props) {
   const [show, setShow] = useState<Status[]>(['RED', 'AMBER', 'GREEN'])
@@ -88,6 +109,15 @@ export function Results(p: Props) {
           })}
         </div>
 
+        {(() => {
+          const t = verdictTimeText(p.timing.extractMs, p.timing.checkMs, p.extractSource, p.checkSource)
+          return t ? (
+            <p className="mt-4 font-mono text-sm" data-testid="verdict-time">
+              {t}
+            </p>
+          ) : null
+        })()}
+
         {rent ? (
           <p className="mt-4 text-sm">
             True monthly cost:{' '}
@@ -98,6 +128,46 @@ export function Results(p: Props) {
           </p>
         ) : null}
       </div>
+
+      {p.cached && (
+        <div className="rounded-[14px] border-2 border-amber-solid bg-amber-bg p-4 text-sm" role="status" data-testid="cached-banner">
+          <p className="font-semibold text-amber-text">{p.cachedLabel}</p>
+          <p className="mt-1">
+            {p.cached.reason}{' '}
+            {p.cached.hasRecordedCloud
+              ? `Showing the bundled verdict for the sample lease, recorded from a live cloud check${p.cached.recordedAt ? ` on ${new Date(p.cached.recordedAt).toLocaleDateString()}` : ''}, merged with the playbook rules run in your browser.`
+              : 'No recorded cloud verdict is bundled in this build, so only the playbook rules run in your browser are shown.'}
+          </p>
+          {p.cached.edited && <p className="mt-1">You edited the extract: cached cloud findings reflect the unedited sample, while the playbook rules reflect your edits.</p>}
+          {p.liveRetry && (
+            <p className="mt-2 text-text-secondary" aria-live="polite">
+              {p.liveRetry.active
+                ? `Retrying the live check in the background (attempt ${p.liveRetry.attempt} of ${p.liveRetry.total}). The live result replaces this one if it arrives.`
+                : 'The live check is still unavailable. Use "Retry cloud review" to try again.'}
+            </p>
+          )}
+          {!p.liveRetry?.active && (
+            <button type="button" className="btn mt-3 text-sm" onClick={p.onRetryCheck}>
+              Retry cloud review
+            </button>
+          )}
+        </div>
+      )}
+      {p.liveRetry?.swapped && !p.cached && (
+        <p className="rounded-lg border border-green-solid bg-green-bg px-4 py-2.5 text-sm text-green-text" role="status" data-testid="live-swapped">
+          Live result arrived and replaced the cached sample result.
+        </p>
+      )}
+
+      {p.onDownloadFixture && (
+        <div className="no-print paper p-4 text-sm">
+          <p className="font-semibold">Record mode</p>
+          <p className="hint mt-1">This live cloud verdict for the unmodified sample lease can be saved as the bundled Judge Mode fallback.</p>
+          <button type="button" className="btn mt-2 text-sm" onClick={p.onDownloadFixture}>
+            Download verdict fixture (sample-verdict.json)
+          </button>
+        </div>
+      )}
 
       {p.checking && (
         <div className="paper p-4 text-sm" role="status" aria-live="polite">

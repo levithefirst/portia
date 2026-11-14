@@ -1,0 +1,9 @@
+{
+  "recorded": false,
+  "note": "Placeholder until a real cloud run is recorded. Record it from the deployed app with ?judge=1&record=1 (docs/HANDOFF-PORTIA.md item 7b) and replace this file. Until then, the cached fallback shows only the in-browser playbook rule results and says so.",
+  "playbookId": "us-typical",
+  "model": "gemini-3.5-flash-lite",
+  "inferenceSource": "in_cloud",
+  "recordedAt": null,
+  "rawText": "[]"
+}

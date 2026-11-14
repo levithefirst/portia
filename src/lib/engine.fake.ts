@@ -16,8 +16,15 @@ interface Call {
 declare global {
   interface Window {
     __portiaCalls?: Call[]
+    __portiaWarmAt?: number
   }
 }
+
+/** ?fakeCheck=fail -> every check throws a 429. ?fakeCheck=slow -> first check takes 9 s. */
+function checkMode(): string {
+  return new URLSearchParams(location.search).get('fakeCheck') ?? 'ok'
+}
+let checkCount = 0
 
 function record(c: Call) {
   window.__portiaCalls = [...(window.__portiaCalls ?? []), c]
@@ -31,6 +38,9 @@ export const fakeEngine: AiEngine = {
   async prepareDevice() {
     /* nothing to download */
   },
+  async warmUp() {
+    window.__portiaWarmAt = performance.now()
+  },
   async willRunOnDevice() {
     return false
   },
@@ -41,7 +51,13 @@ export const fakeEngine: AiEngine = {
   },
   async check(prompt) {
     record({ kind: 'check', prompt, imageCount: 0 })
-    await new Promise((r) => setTimeout(r, 150))
+    const mode = checkMode()
+    checkCount++
+    if (mode === 'fail') {
+      await new Promise((r) => setTimeout(r, 300))
+      throw new Error('[GoogleGenerativeAI Error]: 429 RESOURCE_EXHAUSTED (fake)')
+    }
+    await new Promise((r) => setTimeout(r, mode === 'slow' && checkCount === 1 ? 9000 : 150))
     return {
       text: JSON.stringify([
         {

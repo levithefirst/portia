@@ -7,6 +7,10 @@
 // B) "e2e" build (fake engine that behaves like a phone without Nano):
 //    consent gate, inferenceSource badges, edited JSON is what the check step
 //    receives, no lease text or images in the check payload.
+// C) Judge Mode 10-second loop on the e2e build: the sample loop must reach a
+//    verdict within 10 s when the cloud check succeeds, when it is mocked to
+//    fail (429), and when it is mocked to be slow (cached at 8 s, live swapped
+//    in after). Cached results must never appear for a non-sample document.
 //
 // Uses the Playwright that is installed on the machine (require('playwright'))
 // and axe-core from devDependencies.
@@ -119,6 +123,8 @@ try {
   {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
     await page.goto('http://localhost:4318/')
+    await page.waitForTimeout(500)
+    ok((await page.evaluate(() => window.__portiaWarmAt)) === undefined, 'B: no pre-warm outside Judge Mode')
     await page.getByRole('button', { name: 'Load sample lease' }).click()
     await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
     await page.getByTestId('extract').click()
@@ -161,6 +167,66 @@ try {
     await page.setViewportSize({ width: 412, height: 915 })
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
     ok(!overflow, 'B: no horizontal scroll at Pixel 7 width')
+    await page.close()
+  }
+
+  // ---------- C) Judge Mode, 10-second loop ----------
+  async function judgeLoop(fakeCheck, { editText = false } = {}) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+    await page.goto(`http://localhost:4318/?judge=1&fakeCheck=${fakeCheck}`)
+    await page.waitForFunction(() => typeof window.__portiaWarmAt === 'number', null, { timeout: 3000 })
+    const calledBeforeTap = await page.evaluate(() => (window.__portiaCalls ?? []).length === 0)
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    if (editText) await page.locator('#lease-text').press('End').then(() => page.keyboard.type(' Extra clause.'))
+    await page.getByTestId('extract').click()
+    await page.getByTestId('consent-banner').waitFor()
+    const t0 = Date.now()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('approve').click()
+    return { page, t0, calledBeforeTap }
+  }
+
+  {
+    const { page, t0, calledBeforeTap } = await judgeLoop('ok')
+    ok(calledBeforeTap, 'C(ok): models pre-warmed on landing before any tap, without a model call')
+    await page.getByTestId('badge-Check').waitFor({ timeout: 10000 })
+    const ms = Date.now() - t0
+    ok(ms <= 10000 && (await page.getByTestId('badge-Check').innerText()).includes('IN_CLOUD'), `C(ok): live verdict within 10 s (${ms} ms)`)
+    const t = await page.getByTestId('verdict-time').innerText()
+    ok(/^Verdict in \d+\.\ds, cloud \+ cloud/.test(t), `C(ok): elapsed time shown ("${t}")`)
+    ok((await page.getByTestId('cached-banner').count()) === 0, 'C(ok): no cached label when live succeeds')
+    await page.close()
+  }
+
+  {
+    const { page, t0 } = await judgeLoop('fail')
+    await page.getByTestId('cached-banner').waitFor({ timeout: 10000 })
+    const ms = Date.now() - t0
+    const banner = await page.getByTestId('cached-banner').innerText()
+    ok(ms <= 10000 && banner.includes('Cached sample result (live check unavailable)'), `C(fail): cached sample result labelled within 10 s (${ms} ms)`)
+    ok((await page.getByTestId('badge-Check').innerText()).includes('CACHED SAMPLE'), 'C(fail): check badge says CACHED SAMPLE')
+    ok((await page.getByTestId('verdict-time').innerText()).includes('cached sample'), 'C(fail): elapsed time names the cached source')
+    const red = Number(await page.getByTestId('count-RED').locator('span.font-mono').innerText())
+    ok(red >= 1, `C(fail): cached verdict still shows red flags (${red})`)
+    ok(banner.includes('Retrying the live check in the background'), 'C(fail): live check keeps retrying in the background')
+    await page.close()
+  }
+
+  {
+    const { page, t0 } = await judgeLoop('slow')
+    await page.getByTestId('cached-banner').waitFor({ timeout: 10000 })
+    const ms = Date.now() - t0
+    ok(ms >= 7500 && ms <= 10000, `C(slow): cached result shown at the 8 s cutoff (${ms} ms)`)
+    await page.getByTestId('live-swapped').waitFor({ timeout: 8000 })
+    ok((await page.getByTestId('badge-Check').innerText()).includes('IN_CLOUD') && (await page.getByTestId('cached-banner').count()) === 0, 'C(slow): live result swapped in when it arrived')
+    await page.close()
+  }
+
+  {
+    const { page } = await judgeLoop('fail', { editText: true })
+    await page.getByText('The cloud review failed.').waitFor({ timeout: 10000 })
+    ok((await page.getByTestId('cached-banner').count()) === 0, 'C(non-sample): no cached result for a modified document, real error shown')
     await page.close()
   }
 } finally {

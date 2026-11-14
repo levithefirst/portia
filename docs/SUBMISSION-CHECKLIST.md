@@ -32,18 +32,19 @@ Legend: **Repo** = done in code/docs. **Handoff #n** = Portia bot step in `docs/
 
 | Criterion | Evidence in Portia |
 | --- | --- |
-| **1. Technological Implementation**: how well built, how effectively it uses Firebase AI Logic hybrid inference | Two model instances with different inference modes per feature (the FAQ's recommended pattern). Structured output on both sides via one `Schema` (`responseConstraint` + `responseSchema`). `initializeDeviceModel` on a gesture with progress. Privacy gate that mirrors the SDK's on-device checks to block silent fallback (`src/lib/onDevice.ts`, `src/lib/pipeline.ts`). `inferenceSource` badges. App Check. Deterministic in-browser rule engine plus cloud review merge; uncited reds capped. 18 unit tests and a 30-check Playwright + axe smoke test. |
+| **1. Technological Implementation**: how well built, how effectively it uses Firebase AI Logic hybrid inference | Two model instances with different inference modes per feature (the FAQ's recommended pattern). Structured output on both sides via one `Schema` (`responseConstraint` + `responseSchema`). `initializeDeviceModel` on a gesture with progress. Privacy gate that mirrors the SDK's on-device checks to block silent fallback (`src/lib/onDevice.ts`, `src/lib/pipeline.ts`). `inferenceSource` badges. App Check. Deterministic in-browser rule engine plus cloud review merge; uncited reds capped. 21 unit tests and a 43-check Playwright + axe smoke test, including a Judge Mode 10-second loop with the cloud mocked to fail. Judge Mode pre-warms the models and times the loop. |
 | **2. Design**: complete, coherent product, not a proof of concept | Three-step flow (Document > Review > Clause map), editable extract, true monthly cost, printable question list, light/dark/phone layouts, ink-on-paper theme with semantic status colors plus icons and text labels, empty/loading/error/retry/download states, Privacy page, setup state that still works without keys. |
 | **3. Potential Impact**: credible, specific case for a real audience, demonstrated | Renters before signing. Verified stats (Furth-Matzkin 2017; Weightmans 2024; AppFolio 2026) and FTC enforcement ($49.75M Progress Residential, $48M Invitation Homes). Playbooks for the US, England & Wales, Lagos, and a general junk-fee pack. Works on a Pixel 7 via consent. |
 | **4. Quality of the Idea**: creative, non-obvious use of Firebase AI Logic; understanding of the problem | Hybrid split by data sensitivity: the private document stays on-device; only a user-approved, minimal JSON reaches the cloud. Output is a structured fee map with citations and landlord questions, not a summary. Honest about the fallback trap in PREFER_ON_DEVICE and designs around it. |
 
-## Self-verification (Milestone 5), run 2026-11-14
+## Self-verification (Milestone 5 + Addendum 2), run 2026-11-14
 
 | Check | Result |
 | --- | --- |
 | `npm ci && npm run build` | PASS |
-| `npm test` (vitest, 18 tests) | PASS |
-| `npm run test:smoke` (30 checks incl. axe on intake, review, results light/dark, consent, privacy) | PASS |
+| `npm test` (vitest, 21 tests) | PASS |
+| `npm run test:smoke` (43 checks incl. axe on intake, review, results light/dark, consent, privacy, and the Judge Mode 10 s loop with cloud ok / failing / slow) | PASS |
+| Judge Mode: cached result only for the unmodified sample, labelled "Cached sample result (live check unavailable)", live retry + swap, elapsed time, pre-warm | PASS (unit + smoke) |
 | No API keys, debug tokens or secrets in git (`git grep` for `AIza`, `6L`-style site keys, private keys, tokens) | PASS |
 | Repo still private; Claude Code did not change visibility | PASS (flip is Handoff #8 after Fluid's OK) |
 | Apache-2.0 `LICENSE` in repo | PASS (About visibility: Handoff #8) |
@@ -56,4 +57,5 @@ Legend: **Repo** = done in code/docs. **Handoff #n** = Portia bot step in `docs/
 | Docs: SDK-NOTES, HANDOFF-PORTIA, DEMO-SCRIPT, DEVPOST, SUBMISSION-CHECKLIST, README, Privacy page | PASS |
 | No Devpost submission, no video published, no secrets printed | PASS |
 | Public HTTPS URL | **BLOCKED** until Handoff #3, #5, #7 |
+| Recorded cloud verdict in `src/fixtures/sample-verdict.json` (currently placeholder; fallback shows playbook rules only) | **BLOCKED** until Handoff #7b |
 | Live ON_DEVICE run against `portia-f1dbe` | **BLOCKED** until Handoff #7 (or #6 locally) and a Chrome with Nano |

@@ -59,3 +59,4 @@ Portia sets `inCloudParams.model: "gemini-3.5-flash-lite"` explicitly (constant 
 6. **Confidence.** No confidence API is used. Empty fields and fields the user marks "I'm not sure" are highlighted amber and passed to the check prompt as a list.
 7. **Single package.** App Check is imported from `firebase/app-check` on the single `firebase` package. No `@firebase/app-check` dependency.
 8. **Count tokens** is listed as not supported for hybrid; Portia does not call it.
+9. **Judge Mode pre-warm.** Typings for `initializeDeviceModel`: "If it is called without a user interaction, and it requires a download, this will cause an error." Pre-warm therefore calls `getModels()` (initializeApp, App Check, `getAI`, both `getGenerativeModel` calls) on landing, and calls `initializeDeviceModel()` only when `LanguageModel.availability()` already returns `"available"`. Downloads still start from the **Prepare on-device model** or **Extract** click.

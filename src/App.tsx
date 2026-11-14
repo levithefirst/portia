@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ConsentBanner } from './components/ConsentBanner'
 import { DeviceStatus } from './components/DeviceStatus'
 import { ExtractEditor } from './components/ExtractEditor'
@@ -14,7 +14,27 @@ import { fileToGenerativePart } from './lib/intake'
 import { checkDeviceAvailability, type DeviceAvailability } from './lib/onDevice'
 import { getPlaybook } from './lib/playbooks'
 import { buildCheckPrompt, MAX_IMAGES_PER_EXTRACT } from './lib/prompts'
-import { cleanExtract, ConsentRequiredError, mergeExtracts, mergeFindings, ParseError, runCheck, runExtract } from './lib/pipeline'
+import {
+  cleanExtract,
+  ConsentRequiredError,
+  mergeExtracts,
+  mergeFindings,
+  ParseError,
+  runCheck,
+  runExtract,
+  type CheckOutput,
+} from './lib/pipeline'
+import {
+  CACHED_LABEL,
+  cachedSampleVerdict,
+  isJudgeMode,
+  isRecordMode,
+  JUDGE_RETRY_DELAYS_MS,
+  JUDGE_TIMEOUT_MS,
+  sleep,
+  verdictFixture,
+} from './lib/judge'
+import { CLOUD_MODEL } from './lib/firebase'
 import { runPlaybook } from './lib/rules'
 import {
   forgetApproved,
@@ -25,6 +45,7 @@ import {
   type Remembered,
 } from './lib/storage'
 import type { DisplayFinding, LeaseExtract, PageImage, SourceLabel } from './lib/types'
+import type { CachedInfo, LiveRetry } from './components/Results'
 import sampleExtract from './fixtures/sample-extract.json'
 
 type Step = 'intake' | 'review' | 'results'
@@ -86,6 +107,20 @@ export default function App() {
   const [checkSource, setCheckSource] = useState<SourceLabel | null>(null)
   const [checkPrompt, setCheckPrompt] = useState<string | null>(null)
 
+  // Judge Mode (?judge=1): pre-warm, timing, cached verdict for the sample lease only.
+  const judge = useMemo(() => isJudgeMode(), [])
+  const record = useMemo(() => isRecordMode(), [])
+  const [sampleText, setSampleText] = useState<string | null>(null)
+  const [samplePageIds, setSamplePageIds] = useState<string[]>([])
+  const [extractIsSample, setExtractIsSample] = useState(false)
+  const [originalExtract, setOriginalExtract] = useState<string | null>(null)
+  const [cached, setCached] = useState<CachedInfo | null>(null)
+  const [liveRetry, setLiveRetry] = useState<LiveRetry | null>(null)
+  const [extractMs, setExtractMs] = useState<number | null>(null)
+  const [checkMs, setCheckMs] = useState<number | null>(null)
+  const [lastRaw, setLastRaw] = useState<string | null>(null)
+  const checkRun = useRef(0)
+
   const [remember, setRemember] = useState(rememberEnabled())
   const [saved, setSaved] = useState<Remembered | null>(loadApproved())
 
@@ -105,6 +140,26 @@ export default function App() {
   useEffect(() => {
     if (engine !== undefined) void refreshAvailability()
   }, [engine, refreshAvailability])
+
+  // Judge Mode pre-warm: on landing, without blocking the page or waiting for a tap.
+  useEffect(() => {
+    if (!judge || !engine) return
+    const run = () => {
+      engine.warmUp().catch(() => {
+        /* warm-up is best effort; the real call reports errors */
+      })
+    }
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }
+    if (w.requestIdleCallback) w.requestIdleCallback(run, { timeout: 1500 })
+    else setTimeout(run, 0)
+  }, [judge, engine])
+
+  /** True only while the document is the unmodified bundled sample (text and/or photos). */
+  const isSampleDoc = useMemo(() => {
+    const textOk = leaseText === '' || (sampleText !== null && leaseText === sampleText)
+    const pagesOk = pages.every((p) => samplePageIds.includes(p.id))
+    return textOk && pagesOk && (leaseText !== '' || pages.length > 0)
+  }, [leaseText, pages, sampleText, samplePageIds])
 
   // Consent is per document: any change to the text or pages resets it.
   useEffect(() => {
@@ -148,11 +203,15 @@ export default function App() {
       }
     }
     setExtracting(true)
+    const t0 = performance.now()
     try {
       const images = await Promise.all(batchPages.map((p) => fileToGenerativePart(p.file)))
       const out = await runExtract(engine, { leaseText, images, cloudConsent: consent })
       const next = batchMode && extract ? mergeExtracts(extract, out.extract) : out.extract
       setExtract(next)
+      setExtractMs(performance.now() - t0)
+      setExtractIsSample(batchMode ? extractIsSample && isSampleDoc : isSampleDoc)
+      setOriginalExtract(JSON.stringify(cleanExtract(next)))
       setExtractSource(batchMode && extractSource === 'IN_CLOUD' ? 'IN_CLOUD' : out.source)
       setDonePages((d) => [...d, ...batchPages.map((p) => p.id)])
       setShowConsent(false)
@@ -173,24 +232,102 @@ export default function App() {
   function exploreSample() {
     setExtract(structuredClone(sampleExtract) as LeaseExtract)
     setExtractSource('FIXTURE')
+    setExtractMs(null)
+    setExtractIsSample(false)
     setUnsure([])
     setStep('review')
   }
 
   async function runCloudCheck(approved: LeaseExtract, ruleFindings: DisplayFinding[]) {
     if (!engine) return
+    const runId = ++checkRun.current
+    const current = () => runId === checkRun.current
     setChecking(true)
     setCheckError(null)
+    setCached(null)
+    setLiveRetry(null)
+    setCheckMs(null)
+    setLastRaw(null)
     setCheckPrompt(buildCheckPrompt(approved, playbook, unsure))
-    try {
-      const out = await runCheck(engine, approved, playbook, unsure)
+    const t0 = performance.now()
+    const applyLive = (out: CheckOutput) => {
       setFindings(mergeFindings(ruleFindings, out.findings))
       setCheckSource(out.source)
-    } catch (e) {
-      setCheckError(e instanceof ParseError ? `${e.message} Retry to ask again.` : friendlyError(e))
-    } finally {
-      setChecking(false)
+      setCheckMs(performance.now() - t0)
+      setLastRaw(out.raw)
+      setCached(null)
     }
+    const live = runCheck(engine, approved, playbook, unsure)
+
+    // Cached fallback is allowed ONLY in Judge Mode and ONLY for the bundled sample lease.
+    const useCache = judge && extractIsSample
+    if (!useCache) {
+      try {
+        const out = await live
+        if (current()) applyLive(out)
+      } catch (e) {
+        if (current()) setCheckError(e instanceof ParseError ? `${e.message} Retry to ask again.` : friendlyError(e))
+      } finally {
+        if (current()) setChecking(false)
+      }
+      return
+    }
+
+    type Race = { kind: 'ok'; out: CheckOutput } | { kind: 'err'; e: unknown } | { kind: 'timeout' }
+    const r = await Promise.race<Race>([
+      live.then(
+        (out) => ({ kind: 'ok', out }) as Race,
+        (e) => ({ kind: 'err', e }) as Race,
+      ),
+      sleep(JUDGE_TIMEOUT_MS).then(() => ({ kind: 'timeout' }) as Race),
+    ])
+    if (!current()) return
+    if (r.kind === 'ok') {
+      applyLive(r.out)
+      setChecking(false)
+      return
+    }
+
+    const cv = cachedSampleVerdict(playbook, ruleFindings)
+    setFindings(cv.findings)
+    setCheckSource('CACHED')
+    setCheckMs(performance.now() - t0)
+    setCached({
+      reason: r.kind === 'timeout' ? `The live check took longer than ${JUDGE_TIMEOUT_MS / 1000} seconds.` : friendlyError(r.e),
+      hasRecordedCloud: cv.hasRecordedCloud,
+      recordedAt: cv.recordedAt,
+      edited: originalExtract !== null && JSON.stringify(approved) !== originalExtract,
+    })
+    setChecking(false)
+
+    // Keep retrying live in the background; swap in the live result if it arrives.
+    const waits = r.kind === 'timeout' ? [0, ...JUDGE_RETRY_DELAYS_MS] : JUDGE_RETRY_DELAYS_MS
+    for (let i = 0; i < waits.length; i++) {
+      setLiveRetry({ attempt: i + 1, total: waits.length, active: true, swapped: false })
+      if (waits[i]) await sleep(waits[i])
+      if (!current()) return
+      try {
+        const out = await (i === 0 && r.kind === 'timeout' ? live : runCheck(engine, approved, playbook, unsure))
+        if (!current()) return
+        applyLive(out)
+        setLiveRetry({ attempt: i + 1, total: waits.length, active: false, swapped: true })
+        return
+      } catch {
+        /* try again after the next delay */
+      }
+    }
+    if (current()) setLiveRetry({ attempt: waits.length, total: waits.length, active: false, swapped: false })
+  }
+
+  function downloadVerdictFixture() {
+    if (!extract || !lastRaw) return
+    const data = verdictFixture(lastRaw, playbookId, CLOUD_MODEL, cleanExtract(extract))
+    const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'sample-verdict.json'
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
 
   async function approve() {
@@ -201,6 +338,8 @@ export default function App() {
     setCheckSource(null)
     setCheckPrompt(null)
     setCheckError(null)
+    setCached(null)
+    setLiveRetry(null)
     setStep('results')
     window.scrollTo({ top: 0 })
     saveApproved(approved, playbookId, extractSource)
@@ -212,7 +351,9 @@ export default function App() {
     try {
       const r = await fetch('/fixture-lease.txt')
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
-      setLeaseText(await r.text())
+      const t = await r.text()
+      setSampleText(t)
+      setLeaseText(t)
       setRejections([])
     } catch (e) {
       setExtractError({ message: `Could not load the sample lease (${friendlyError(e)}).` })
@@ -232,6 +373,7 @@ export default function App() {
         }),
       )
       const added = files.map(toPage)
+      setSamplePageIds(added.map((p) => p.id))
       setPages(added)
       setBatch(added.slice(0, MAX_IMAGES_PER_EXTRACT).map((p) => p.id))
       setDonePages([])
@@ -242,6 +384,12 @@ export default function App() {
   }
 
   function startOver() {
+    checkRun.current++
+    setCached(null)
+    setLiveRetry(null)
+    setExtractIsSample(false)
+    setExtractMs(null)
+    setCheckMs(null)
     pages.forEach((p) => URL.revokeObjectURL(p.url))
     setLeaseText('')
     setPages([])
@@ -271,6 +419,8 @@ export default function App() {
     if (!saved) return
     setExtract(saved.extract)
     setExtractSource(saved.source)
+    setExtractIsSample(false)
+    setExtractMs(null)
     setPlaybookId(saved.playbookId)
     setStep('review')
   }
@@ -328,6 +478,15 @@ export default function App() {
                   </li>
                 </ol>
               </div>
+            )}
+
+            {judge && (
+              <p className="no-print rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm" data-testid="judge-banner">
+                <span className="font-mono text-xs font-medium text-accent-text">JUDGE MODE</span>{' '}
+                Models are pre-warmed on landing and the core loop is timed. For the sample lease only, if the live cloud check
+                fails or takes over {JUDGE_TIMEOUT_MS / 1000} s, a cached sample result is shown and clearly labelled while the live
+                check keeps retrying. <a href="/?judge=0">Turn off</a>
+              </p>
             )}
 
             <nav aria-label="Progress" className="no-print">
@@ -531,7 +690,17 @@ export default function App() {
                   const approved = cleanExtract(extract)
                   void runCloudCheck(approved, runPlaybook(playbook, approved))
                 }}
-                onEdit={() => setStep('review')}
+                onEdit={() => {
+                  checkRun.current++
+                  setStep('review')
+                }}
+                cached={cached}
+                cachedLabel={CACHED_LABEL}
+                liveRetry={liveRetry}
+                timing={{ extractMs, checkMs }}
+                onDownloadFixture={
+                  judge && record && checkSource === 'IN_CLOUD' && extractIsSample && lastRaw ? downloadVerdictFixture : undefined
+                }
                 onStartOver={startOver}
                 cloudReviewAvailable={aiReady}
               />
