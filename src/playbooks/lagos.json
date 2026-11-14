@@ -1,0 +1,84 @@
+{
+  "id": "lagos",
+  "name": "Lagos",
+  "jurisdiction": "Lagos State, Nigeria (Lagos State Tenancy Law 2011)",
+  "summary": "Common Lagos residential patterns, informed by the Lagos State Tenancy Law 2011. The Law does not apply in every area of Lagos; check its scope section for your location.",
+  "version": "2026-11",
+  "rules": [
+    {
+      "id": "LG-ADV-01",
+      "field": "rentPeriod",
+      "title": "Rent demanded in advance",
+      "note": "The Lagos State Tenancy Law 2011 restricts how much rent a landlord may demand or receive in advance, with different limits for new and sitting tenants (for example, more than one year in advance for a new yearly tenant is restricted). Large multi-year advance demands are worth challenging.",
+      "ask": "How many months or years of rent are you asking for up front, and can it be limited to what the Tenancy Law allows?",
+      "source": "Lagos State Tenancy Law 2011, s.4 (check the current text).",
+      "check": {
+        "type": "textMatches",
+        "fields": ["rentPeriod", "rawNotes", "otherMoneyTerms"],
+        "patterns": ["advance", "2 years", "two years", "24 months", "biennial", "upfront", "up front"],
+        "status": "AMBER"
+      }
+    },
+    {
+      "id": "LG-FEE-01",
+      "field": "mandatoryFees",
+      "title": "Agency, legal, caution and service charges",
+      "note": "Agency, legal, caution (deposit) and service charges are common in Lagos and can add a large share to the first-year cost. Ask for each one in writing with what it covers and whether it is refundable.",
+      "ask": "Please list every one-time and recurring charge, what each covers, and which are refundable.",
+      "source": "Common Lagos market practice; check the Lagos State Tenancy Law 2011 and any current agency regulations.",
+      "check": {
+        "type": "mandatoryFees",
+        "status": "AMBER",
+        "keywords": ["agency", "agent", "legal", "commission", "inspection", "development", "service charge"],
+        "keywordStatus": "AMBER"
+      }
+    },
+    {
+      "id": "LG-FEE-02",
+      "field": "mandatoryFees",
+      "title": "Fees large relative to rent",
+      "note": "When required fees add up to a large share of rent, the real cost of the tenancy is much higher than the quoted rent.",
+      "ask": "Can any of these charges be reduced or folded into the rent?",
+      "check": { "type": "feesPctOfRent", "amber": 15, "red": 30 }
+    },
+    {
+      "id": "LG-NOTICE-01",
+      "field": "noticePeriodDays",
+      "title": "Notice periods",
+      "note": "The Tenancy Law sets minimum statutory notice lengths that depend on the tenancy type (for example, longer notice for yearly tenancies than monthly ones). A lease term that cuts these short may not hold up.",
+      "ask": "Does the notice clause match the minimum notice in the Lagos State Tenancy Law for this type of tenancy?",
+      "source": "Lagos State Tenancy Law 2011, s.13 (check the current text).",
+      "green": "A notice period is stated.",
+      "check": { "type": "noticeDays", "amberAbove": 183, "redAbove": 365 }
+    },
+    {
+      "id": "LG-DEP-01",
+      "field": "depositAmount",
+      "title": "Caution deposit size",
+      "note": "A caution (security) deposit is common. Make sure the amount, refund conditions and timeline are written down.",
+      "ask": "When and how will the caution deposit be refunded, and what deductions are allowed?",
+      "check": { "type": "depositMonths", "amber": 3, "red": 6 }
+    },
+    {
+      "id": "LG-RENEW-01",
+      "field": "autoRenewal",
+      "title": "Renewal and rent review",
+      "note": "Clarify whether the tenancy renews, at what rent, and how much notice of a rent increase you will get.",
+      "ask": "How will renewal and any rent increase be handled, and how much notice will I get?",
+      "check": { "type": "autoRenewal", "yes": "AMBER", "unclear": "AMBER" }
+    },
+    {
+      "id": "LG-MAINT-01",
+      "field": "maintenanceResponsibility",
+      "title": "Repairs pushed onto the tenant",
+      "note": "Make sure structural repairs and major installations remain the landlord's responsibility in writing.",
+      "ask": "Which repairs will you handle, and how quickly?",
+      "check": {
+        "type": "textMatches",
+        "fields": ["maintenanceResponsibility"],
+        "patterns": ["all repairs", "all maintenance", "any repair", "structural", "regardless of cause"],
+        "status": "AMBER"
+      }
+    }
+  ]
+}

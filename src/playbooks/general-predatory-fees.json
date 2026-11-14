@@ -1,0 +1,75 @@
+{
+  "id": "general-predatory-fees",
+  "name": "General predatory-fee pack",
+  "jurisdiction": "Any market. Informed by public FTC junk-fee enforcement patterns",
+  "summary": "Patterns that inflate the real cost of a rental or storage agreement anywhere: drip-priced mandatory fees, penalty-sized late fees, and lock-in terms.",
+  "version": "2026-11",
+  "rules": [
+    {
+      "id": "GEN-FEE-01",
+      "field": "mandatoryFees",
+      "title": "Mandatory fee not in the headline price",
+      "note": "Required fees that are not part of the advertised price are a classic junk-fee pattern. The FTC has pursued large rental landlords over undisclosed mandatory fees.",
+      "ask": "Is this fee required? If so, can you include it in the advertised rent so I can compare properly?",
+      "source": "FTC: Invitation Homes, $48M (2024); Progress Residential / Pretium, $49.75M (November 2026).",
+      "check": {
+        "type": "mandatoryFees",
+        "status": "AMBER",
+        "keywords": ["technology", "tech", "amenity", "convenience", "admin", "processing", "service", "valet", "trash", "smart home", "utility billing", "community", "facility"],
+        "keywordStatus": "RED"
+      }
+    },
+    {
+      "id": "GEN-FEE-02",
+      "field": "mandatoryFees",
+      "title": "True monthly cost well above rent",
+      "note": "Add every required recurring fee to the rent. If the total is far above the quoted rent, compare listings on the total, not the headline.",
+      "ask": "What is the total I must pay each month, including every required fee?",
+      "check": { "type": "feesPctOfRent", "amber": 5, "red": 10 }
+    },
+    {
+      "id": "GEN-LATE-01",
+      "field": "lateFeeAmount",
+      "title": "Penalty-sized late fee",
+      "note": "Late fees far above the landlord's real cost of a late payment act as a penalty. About 5% of rent is a common benchmark.",
+      "ask": "Can the late fee be capped at about 5% of monthly rent?",
+      "green": "The late fee is a modest share of rent.",
+      "check": { "type": "lateFeePct", "amber": 5, "red": 10 }
+    },
+    {
+      "id": "GEN-LATE-02",
+      "field": "lateFeeGraceDays",
+      "title": "No grace period",
+      "note": "A late fee that applies on the due date leaves no room for bank delays.",
+      "ask": "Can we add a grace period of a few days before a late fee applies?",
+      "green": "There is a grace period.",
+      "check": { "type": "graceDays", "amberBelow": 3, "redBelow": 1 }
+    },
+    {
+      "id": "GEN-RENEW-01",
+      "field": "autoRenewal",
+      "title": "Automatic renewal lock-in",
+      "note": "Automatic renewal with a long notice window is a common lock-in pattern in rental and storage agreements.",
+      "ask": "Can renewal require my written agreement instead of renewing automatically?",
+      "green": "The agreement does not renew automatically.",
+      "check": { "type": "autoRenewal", "yes": "AMBER", "unclear": "AMBER" }
+    },
+    {
+      "id": "GEN-NOTICE-01",
+      "field": "noticePeriodDays",
+      "title": "Long cancellation notice",
+      "note": "Long notice periods make it easy to miss the window and get charged for another term.",
+      "ask": "Can the notice period be 30 days?",
+      "green": "The notice period is short.",
+      "check": { "type": "noticeDays", "amberAbove": 45, "redAbove": 90 }
+    },
+    {
+      "id": "GEN-TERM-01",
+      "field": "earlyTerminationPenalty",
+      "title": "Exit penalty",
+      "note": "Exit penalties should be predictable and proportionate. Ask for a fixed cap.",
+      "ask": "What is the maximum I would pay to end early?",
+      "check": { "type": "textPresent", "status": "AMBER" }
+    }
+  ]
+}

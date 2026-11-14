@@ -1,0 +1,88 @@
+{
+  "id": "england-wales",
+  "name": "England & Wales",
+  "jurisdiction": "England (Tenant Fees Act 2019) and Wales (Renting Homes (Fees etc.) (Wales) Act 2019)",
+  "summary": "Assured shorthold and similar private tenancies. Most tenant fees are banned and deposits are capped. Renting reforms are in progress in England; check gov.uk for what is in force on your signing date.",
+  "version": "2026-11",
+  "rules": [
+    {
+      "id": "EW-FEE-01",
+      "field": "mandatoryFees",
+      "title": "Fee that may be a prohibited payment",
+      "note": "In England, the Tenant Fees Act 2019 bans most fees beyond rent, a capped refundable deposit, a holding deposit, and a short list of permitted payments (for example utilities, council tax, certain default fees, and up to GBP 50 for agreed changes to the tenancy). Wales has a similar Act.",
+      "ask": "Which permitted payment under the Tenant Fees Act 2019 does this fee fall under?",
+      "source": "Tenant Fees Act 2019, Schedule 1 (legislation.gov.uk/ukpga/2019/4); Renting Homes (Fees etc.) (Wales) Act 2019.",
+      "check": { "type": "mandatoryFees", "status": "RED" }
+    },
+    {
+      "id": "EW-DEP-01",
+      "field": "depositAmount",
+      "title": "Deposit above the 5-week cap",
+      "note": "Under the Tenant Fees Act 2019 a tenancy deposit is generally capped at 5 weeks' rent where annual rent is under GBP 50,000 (6 weeks at or above that).",
+      "ask": "The deposit looks higher than 5 weeks' rent. Can it be reduced to the cap, and which protection scheme will hold it?",
+      "source": "Tenant Fees Act 2019, Schedule 1, para 2.",
+      "green": "The deposit appears to be within the 5-week cap.",
+      "check": { "type": "depositWeeks", "red": 5 }
+    },
+    {
+      "id": "EW-LATE-01",
+      "field": "lateFeeGraceDays",
+      "title": "Late rent charges before 14 days",
+      "note": "A default fee for late rent is generally only permitted once rent is at least 14 days overdue, and is limited to interest at no more than 3% above the Bank of England base rate.",
+      "ask": "Can the late rent clause follow the Tenant Fees Act limits (14 days, interest at 3% above base rate)?",
+      "source": "Tenant Fees Act 2019, Schedule 1, para 4.",
+      "green": "Late charges only start after 14 days.",
+      "check": { "type": "graceDays", "amberBelow": 14, "redBelow": 14 }
+    },
+    {
+      "id": "EW-LATE-02",
+      "field": "lateFeeAmount",
+      "title": "Flat late fee",
+      "note": "A flat late fee, rather than interest on the overdue amount, may not fit the permitted default payment for late rent.",
+      "ask": "Can the flat late fee be replaced by interest capped at 3% above the Bank of England base rate?",
+      "source": "Tenant Fees Act 2019, Schedule 1, para 4.",
+      "check": { "type": "lateFeePct", "amber": 0, "red": 3 }
+    },
+    {
+      "id": "EW-RENEW-01",
+      "field": "autoRenewal",
+      "title": "Renewal and rollover terms",
+      "note": "Rollover terms and fixed-term structures are changing under renting reform in England. Make sure you understand what happens at the end of the term and how much notice you must give.",
+      "ask": "What happens at the end of the term, and what notice do I need to give to leave?",
+      "source": "gov.uk guidance on private renting (check current status).",
+      "check": { "type": "autoRenewal", "yes": "AMBER", "unclear": "AMBER" }
+    },
+    {
+      "id": "EW-NOTICE-01",
+      "field": "noticePeriodDays",
+      "title": "Long tenant notice period",
+      "note": "One month (or one rental period) is common for tenants in periodic tenancies. Longer notice terms are worth checking.",
+      "ask": "Can the tenant notice period be one month?",
+      "green": "Tenant notice is within a common range.",
+      "check": { "type": "noticeDays", "amberAbove": 31, "redAbove": 62 }
+    },
+    {
+      "id": "EW-TERM-01",
+      "field": "earlyTerminationPenalty",
+      "title": "Early termination charge",
+      "note": "A payment for leaving early at your request is permitted, but generally should not exceed the landlord's actual loss or reasonable costs.",
+      "ask": "How is the early termination charge calculated, and will it be limited to your reasonable costs?",
+      "source": "Tenant Fees Act 2019, Schedule 1, para 6.",
+      "check": { "type": "textPresent", "status": "AMBER" }
+    },
+    {
+      "id": "EW-MAINT-01",
+      "field": "maintenanceResponsibility",
+      "title": "Repairs pushed onto the tenant",
+      "note": "Landlords generally keep repair duties for structure, exterior, and installations for water, gas, electricity, heating and sanitation, and these cannot usually be contracted out.",
+      "ask": "Will you confirm that structural, heating, plumbing and electrical repairs remain the landlord's responsibility?",
+      "source": "Landlord and Tenant Act 1985, s.11.",
+      "check": {
+        "type": "textMatches",
+        "fields": ["maintenanceResponsibility"],
+        "patterns": ["all repairs", "all maintenance", "any repair", "appliance", "boiler", "heating", "regardless of cause"],
+        "status": "AMBER"
+      }
+    }
+  ]
+}

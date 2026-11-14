@@ -1,0 +1,109 @@
+{
+  "id": "us-typical",
+  "name": "US-typical",
+  "jurisdiction": "United States, general patterns (state and local law varies)",
+  "summary": "Common US residential lease patterns. State and city rules differ a lot; treat every flag as a prompt to check your local law or a tenant union.",
+  "version": "2026-11",
+  "rules": [
+    {
+      "id": "US-LATE-01",
+      "field": "lateFeeAmount",
+      "title": "Late fee size",
+      "note": "Many US states cap or regulate residential late fees, often as a percentage of monthly rent. Fees well above about 5% of rent are frequently treated as unreasonable penalties.",
+      "ask": "Can the late fee be reduced to a fixed percentage of rent that matches our state's rules?",
+      "source": "General US pattern; check your state landlord-tenant statute.",
+      "green": "The late fee is a modest share of rent.",
+      "check": { "type": "lateFeePct", "amber": 5, "red": 10 }
+    },
+    {
+      "id": "US-LATE-02",
+      "field": "lateFeeGraceDays",
+      "title": "Grace period before late fees",
+      "note": "Several states require a grace period (commonly around 5 days) before a late fee can be charged. A fee on day one is a common source of disputes.",
+      "ask": "Can we add a grace period of at least 5 days before any late fee applies?",
+      "source": "General US pattern; check your state landlord-tenant statute.",
+      "green": "There is a grace period before late fees apply.",
+      "check": { "type": "graceDays", "amberBelow": 5, "redBelow": 1 }
+    },
+    {
+      "id": "US-DEP-01",
+      "field": "depositAmount",
+      "title": "Security deposit size",
+      "note": "Many states cap security deposits, often at one or two months' rent. Larger deposits are worth questioning.",
+      "ask": "What is the legal maximum deposit here, and can the deposit be reduced to one month's rent?",
+      "source": "General US pattern; check your state deposit statute.",
+      "green": "The deposit is within a common range.",
+      "check": { "type": "depositMonths", "amber": 1.5, "red": 2 }
+    },
+    {
+      "id": "US-FEE-01",
+      "field": "mandatoryFees",
+      "title": "Mandatory fees on top of rent",
+      "note": "Required monthly fees raise your true cost above the advertised rent. The FTC has taken action against large landlords over rental fees that were not disclosed in advertised prices.",
+      "ask": "Which of these fees are optional, and what is the full monthly amount I must pay including every required fee?",
+      "source": "FTC: Invitation Homes, $48M settlement over hidden rental fees (2024); Progress Residential / Pretium, $49.75M (November 2026).",
+      "check": {
+        "type": "mandatoryFees",
+        "status": "AMBER",
+        "keywords": ["technology", "tech", "amenity", "convenience", "admin", "processing", "service", "valet", "trash", "pest", "smart home", "utility billing", "community"],
+        "keywordStatus": "RED"
+      }
+    },
+    {
+      "id": "US-RENEW-01",
+      "field": "autoRenewal",
+      "title": "Automatic renewal",
+      "note": "Auto-renewal clauses can lock you into another full term if you miss a notice deadline. Some states require landlords to remind tenants about them.",
+      "ask": "Can the lease convert to month-to-month at the end of the term instead of renewing for a full term?",
+      "source": "General US pattern; some states regulate automatic renewal clauses.",
+      "green": "The lease does not renew automatically.",
+      "check": { "type": "autoRenewal", "yes": "AMBER", "unclear": "AMBER" }
+    },
+    {
+      "id": "US-NOTICE-01",
+      "field": "noticePeriodDays",
+      "title": "Notice to leave",
+      "note": "30 to 60 days is common. Longer notice periods, combined with auto-renewal, make it easy to miss the window.",
+      "ask": "Can the notice period be shortened to 30 days?",
+      "green": "The notice period is within a common range.",
+      "check": { "type": "noticeDays", "amberAbove": 60, "redAbove": 90 }
+    },
+    {
+      "id": "US-MAINT-01",
+      "field": "maintenanceResponsibility",
+      "title": "Repairs pushed onto the tenant",
+      "note": "In most states landlords must keep a rental habitable, and that duty generally cannot be waived by lease wording. A 1970s line of cases (for example Javins v. First National Realty, D.C. Cir. 1970) established this implied warranty of habitability.",
+      "ask": "Which repairs am I responsible for, and will you confirm in writing that you handle structural, plumbing, heating and appliance repairs?",
+      "source": "Implied warranty of habitability; Javins v. First National Realty Corp., 428 F.2d 1071 (D.C. Cir. 1970).",
+      "check": {
+        "type": "textMatches",
+        "fields": ["maintenanceResponsibility"],
+        "patterns": ["all repairs", "all maintenance", "any repair", "appliance", "as is", "as-is", "regardless of cause"],
+        "status": "AMBER"
+      }
+    },
+    {
+      "id": "US-TERM-01",
+      "field": "earlyTerminationPenalty",
+      "title": "Early termination penalty",
+      "note": "Penalties of several months' rent are common but negotiable. Many states expect landlords to try to re-rent the unit rather than charge the full remaining rent.",
+      "ask": "If I need to leave early, will you cap the fee and credit me once the unit is re-rented?",
+      "source": "General US pattern (duty to mitigate damages varies by state).",
+      "check": { "type": "textPresent", "status": "AMBER" }
+    },
+    {
+      "id": "US-CLAUSE-01",
+      "field": "rawNotes",
+      "title": "Possibly unenforceable clause",
+      "note": "A study of 70 Greater Boston leases found that 51 (73%) contained at least one clause that was unenforceable under state law. Waivers of landlord liability or tenant rights are common examples.",
+      "ask": "Can we remove the waiver language, since it may not be enforceable here?",
+      "source": "Furth-Matzkin, Journal of Legal Analysis (2017).",
+      "check": {
+        "type": "textMatches",
+        "fields": ["rawNotes", "guestPolicy", "maintenanceResponsibility", "earlyTerminationPenalty"],
+        "patterns": ["waive", "waiver", "not liable", "no liability", "hold harmless", "attorney"],
+        "status": "AMBER"
+      }
+    }
+  ]
+}

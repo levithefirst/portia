@@ -1,0 +1,30 @@
+# dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+*.local
+coverage/
+test-results/
+playwright-report/
+
+# secrets: never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+service-account*.json
+*-service-account*.json
+*firebase-adminsdk*.json
+google-services.json
+GoogleService-Info.plist
+appcheck-debug-token*
+*.debug-token
+
+# tooling
+.vercel/
+.firebase/
+.DS_Store
+*.log
+dist-smoke/
+dist-e2e/
