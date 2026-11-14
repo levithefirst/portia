@@ -1,0 +1,28 @@
+{
+  "currency": "USD",
+  "rentAmount": 1850,
+  "rentPeriod": "monthly",
+  "depositAmount": 4625,
+  "lateFeeAmount": 150,
+  "lateFeeGraceDays": 0,
+  "mandatoryFees": [
+    { "name": "Technology Package", "amount": 45, "frequency": "monthly" },
+    { "name": "Community Amenity Fee", "amount": 35, "frequency": "monthly" },
+    { "name": "Valet Trash Service", "amount": 25, "frequency": "monthly" },
+    { "name": "Utility Billing Administration Fee", "amount": 6.95, "frequency": "monthly" },
+    { "name": "Administrative Processing Fee", "amount": 250, "frequency": "one-time" },
+    { "name": "Lease Preparation Fee", "amount": 95, "frequency": "one-time" }
+  ],
+  "noticePeriodDays": 90,
+  "autoRenewal": "yes",
+  "guestPolicy": "Guests may stay no more than 3 nights per month without written consent; unauthorized occupants are charged $25 per day.",
+  "maintenanceResponsibility": "Tenant accepts the unit as is and pays for all repairs to the unit and appliances regardless of cause, except roof and foundation.",
+  "earlyTerminationPenalty": "Three months of rent plus rent owed until the landlord recovers possession.",
+  "otherMoneyTerms": [
+    { "name": "Daily late charge", "amount": 20, "notes": "Per day after the 1st, up to $450 per month" },
+    { "name": "Pet rent", "amount": 50, "notes": "Per pet per month, if approved" },
+    { "name": "Renters insurance", "notes": "At least $100,000 liability, landlord named as additional insured" },
+    { "name": "Attorney fees", "notes": "Tenant pays landlord's attorney fees in any dispute" }
+  ],
+  "rawNotes": "Tenant waives claims against the landlord for property damage, including landlord negligence. Partial payments do not stop late charges."
+}

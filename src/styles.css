@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+/*
+ * Portia theme. Every color in the UI comes from these custom properties.
+ * Tailwind's default palette is removed below (--color-*: initial) so no
+ * stock teal / emerald / cyan / indigo / violet utility can leak in.
+ */
+:root {
+  color-scheme: light;
+  --accent: #247d97;
+  --accent-hover: #0a6e88;
+  --on-accent: #ffffff;
+  --on-status: #ffffff;
+
+  --bg: #fcfbf8;
+  --surface: #f8f7f3;
+  --border: #959288;
+  --border-subtle: #d1cec6;
+  --text: #1d1b12;
+  --text-secondary: #747267;
+  --accent-text: #207a94;
+  --focus: #247d97;
+
+  --red-text: #c04845;
+  --red-bg: #fff3f1;
+  --red-solid: #bd413f;
+  --amber-text: #a06500;
+  --amber-bg: #fff7e8;
+  --amber-solid: #a56900;
+  --green-text: #00825b;
+  --green-bg: #ecfef5;
+  --green-solid: #008760;
+
+  --paper-shadow: 0 1px 0 rgb(29 27 18 / 0.04), 0 8px 24px -12px rgb(29 27 18 / 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #100f0b;
+    --surface: #171611;
+    --border: #636058;
+    --border-subtle: #3f3e37;
+    --text: #f6f4ef;
+    --text-secondary: #b5b3aa;
+    --accent-text: #75bdd6;
+    --focus: #75bdd6;
+    --red-text: #ff968d;
+    --red-bg: #250505;
+    --amber-text: #e6a732;
+    --amber-bg: #1e0d00;
+    --green-text: #58c69b;
+    --green-bg: #00190b;
+    --paper-shadow: 0 1px 0 rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #100f0b;
+  --surface: #171611;
+  --border: #636058;
+  --border-subtle: #3f3e37;
+  --text: #f6f4ef;
+  --text-secondary: #b5b3aa;
+  --accent-text: #75bdd6;
+  --focus: #75bdd6;
+  --red-text: #ff968d;
+  --red-bg: #250505;
+  --amber-text: #e6a732;
+  --amber-bg: #1e0d00;
+  --green-text: #58c69b;
+  --green-bg: #00190b;
+  --paper-shadow: 0 1px 0 rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+}
+
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-serif: "Newsreader", ui-serif, Georgia, serif;
+}
+
+@theme inline {
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--on-accent);
+  --color-on-status: var(--on-status);
+  --color-focus: var(--focus);
+  --color-red-text: var(--red-text);
+  --color-red-bg: var(--red-bg);
+  --color-red-solid: var(--red-solid);
+  --color-amber-text: var(--amber-text);
+  --color-amber-bg: var(--amber-bg);
+  --color-amber-solid: var(--amber-solid);
+  --color-green-text: var(--green-text);
+  --color-green-bg: var(--green-bg);
+  --color-green-solid: var(--green-solid);
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--text);
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  a {
+    color: var(--accent-text);
+    text-underline-offset: 3px;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+@layer components {
+  .paper {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    box-shadow: var(--paper-shadow);
+  }
+  .field {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+    line-height: 1.4;
+  }
+  .field:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+  .field[aria-invalid="true"],
+  .field.unclear {
+    border-color: var(--amber-solid);
+    background: var(--amber-bg);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9px;
+    padding: 0.6rem 1rem;
+    font-weight: 550;
+    font-size: 0.925rem;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    transition: background-color 120ms, border-color 120ms, color 120ms;
+  }
+  .btn:hover:not(:disabled) {
+    border-color: var(--text-secondary);
+    background: var(--surface);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: var(--on-accent);
+  }
+  .btn-ghost {
+    border-color: transparent;
+    background: transparent;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface);
+    border-color: var(--border-subtle);
+  }
+  .label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 550;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+  }
+  .hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .rule {
+    border: 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  :root,
+  :root:not([data-theme="light"]),
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --red-text: #c04845;
+    --amber-text: #a06500;
+    --green-text: #00825b;
+    --accent-text: #207a94;
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --text: #000000;
+    --text-secondary: #333333;
+    --border-subtle: #bbbbbb;
+    --paper-shadow: none;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
+.print-only {
+  display: none;
+}
