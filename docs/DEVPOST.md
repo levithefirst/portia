@@ -1,6 +1,6 @@
 # Devpost submission text (for Fluid to paste)
 
-Replace `<APP_URL>` and `<YOUTUBE_URL>` before submitting. Platform: **Web (Chrome)**.
+Replace `https://portia-eta.vercel.app` and `<YOUTUBE_URL>` before submitting. Platform: **Web (Chrome)**.
 
 ---
 
@@ -9,7 +9,7 @@ Replace `<APP_URL>` and `<YOUTUBE_URL>` before submitting. Platform: **Web (Chro
 **Tagline:** See what a lease really costs before you sign. Gemini Nano maps the fees on your device; only the facts you approve go to the cloud.
 
 **Links**
-- App: <APP_URL>
+- App: https://portia-eta.vercel.app
 - Code: https://github.com/levithefirst/portia (Apache-2.0)
 - Video: <YOUTUBE_URL>
 
@@ -56,4 +56,4 @@ Portia flags patterns from a curated static playbook with hedged notes and publi
 
 ## Testing instructions
 
-Open <APP_URL>/?judge=1 in Chrome (Judge Mode: models pre-warmed on landing, the core loop is timed on the result card, and if the live cloud check is unavailable for the sample lease you will see a clearly labelled cached sample result while it retries). No login. Click **Load sample lease**, then **Extract fee map**. On a browser without Gemini Nano, accept the consent banner. Edit a field, click **Approve & check**, review the clause map and print the questions. To test on-device, use desktop Chrome 139+ with the flags in the README and click **Prepare on-device model** first.
+Open https://portia-eta.vercel.app/?judge=1 in Chrome (Judge Mode: models pre-warmed on landing, the core loop is timed on the result card, and if the live cloud check is unavailable for the sample lease you will see a clearly labelled cached sample result while it retries). No login. Click **Load sample lease**, then **Extract fee map**. On a browser without Gemini Nano, accept the consent banner. Edit a field, click **Approve & check**, review the clause map and print the questions. To test on-device, use desktop Chrome 139+ with the flags in the README and click **Prepare on-device model** first.

@@ -4,7 +4,7 @@
 
 Built for #BuildHybridAI 2026 with **Firebase AI Logic hybrid inference** (Web / Chrome). Not legal advice.
 
-- App: `<APP_URL>` (set after deploy, see `docs/HANDOFF-PORTIA.md`)
+- App: `https://portia-eta.vercel.app` (set after deploy, see `docs/HANDOFF-PORTIA.md`)
 - License: Apache-2.0
 
 ## Why

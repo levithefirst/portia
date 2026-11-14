@@ -1,9 +1,72 @@
 {
-  "recorded": false,
-  "note": "Placeholder until a real cloud run is recorded. Record it from the deployed app with ?judge=1&record=1 (docs/HANDOFF-PORTIA.md item 7b) and replace this file. Until then, the cached fallback shows only the in-browser playbook rule results and says so.",
+  "recorded": true,
+  "note": "Recorded from a live Firebase AI Logic cloud check of the Portia sample lease in Judge Mode.",
   "playbookId": "us-typical",
   "model": "gemini-3.5-flash-lite",
   "inferenceSource": "in_cloud",
-  "recordedAt": null,
-  "rawText": "[]"
+  "recordedAt": "2026-11-14T18:03:23.792Z",
+  "rawText": "[\n  {\n    \"field\": \"depositAmount\",\n    \"status\": \"RED\",\n    \"title\": \"High Security Deposit\",\n    \"reason\": \"The security deposit of 4625 USD is 2.5 months of rent, which exceeds typical one to two-month caps in many states.\",\n    \"askTheLandlord\": \"Would you consider reducing the security deposit to align with typical state guidelines of one or two months of rent?\",\n    \"playbookId\": \"US-DEP-01\"\n  },\n  {\n    \"field\": \"lateFeeAmount\",\n    \"status\": \"RED\",\n    \"title\": \"High Late Fee\",\n    \"reason\": \"The late fee of 150 USD is well above 5 percent of the monthly rent and may be viewed as an unreasonable penalty.\",\n    \"askTheLandlord\": \"Can the late fee amount be adjusted to a lower percentage of the monthly rent, such as 5 percent?\",\n    \"playbookId\": \"US-LATE-01\"\n  },\n  {\n    \"field\": \"lateFeeGraceDays\",\n    \"status\": \"RED\",\n    \"title\": \"No Grace Period for Late Fees\",\n    \"reason\": \"The lease charges a late fee immediately on day zero, while many states require a grace period of around five days.\",\n    \"askTheLandlord\": \"Would you agree to add a five-day grace period before late fees begin accruing?\",\n    \"playbookId\": \"US-LATE-02\"\n  },\n  {\n    \"field\": \"noticePeriodDays\",\n    \"status\": \"AMBER\",\n    \"title\": \"Extremely Long Notice Period\",\n    \"reason\": \"The notice period of 2700 days appears unusual and may be a data entry error or an excessively long requirement.\",\n    \"askTheLandlord\": \"Could you clarify the correct notice period required to vacate at the end of the lease term?\",\n    \"playbookId\": \"US-NOTICE-01\"\n  },\n  {\n    \"field\": \"maintenanceResponsibility\",\n    \"status\": \"RED\",\n    \"title\": \"Extensive Tenant Maintenance Duties\",\n    \"reason\": \"The lease makes the tenant responsible for all repairs except the roof and foundation, conflicting with the implied warranty of habitability in most states.\",\n    \"askTheLandlord\": \"Can we clarify that the landlord remains responsible for major habitability repairs and structural maintenance?\",\n    \"playbookId\": \"US-MAINT-01\"\n  },\n  {\n    \"field\": \"earlyTerminationPenalty\",\n    \"status\": \"AMBER\",\n    \"title\": \"Three-Month Termination Penalty\",\n    \"reason\": \"The early termination fee requires three months of rent plus amounts owed through possession recovery, which is a significant penalty.\",\n    \"askTheLandlord\": \"Would you be open to reducing the early termination penalty or capping it if the unit is successfully re-rented?\",\n    \"playbookId\": \"US-TERM-01\"\n  },\n  {\n    \"field\": \"rawNotes\",\n    \"status\": \"RED\",\n    \"title\": \"Potentially Unenforceable Waivers\",\n    \"reason\": \"The agreement includes liability waivers and attorney fee provisions that may be unenforceable under local tenant laws.\",\n    \"askTheLandlord\": \"Could we review and remove the clauses waiving liability and requiring tenant payment of legal fees?\",\n    \"playbookId\": \"US-CLAUSE-01\"\n  },\n  {\n    \"field\": \"mandatoryFees\",\n    \"status\": \"AMBER\",\n    \"title\": \"Multiple Mandatory Monthly Fees\",\n    \"reason\": \"There are four mandatory monthly fees totaling over 111 USD that increase the true monthly housing cost beyond the base rent.\",\n    \"askTheLandlord\": \"Are all of these mandatory monthly technology, amenity, and trash fees included in the advertised price?\",\n    \"playbookId\": \"US-FEE-01\"\n  },\n  {\n    \"field\": \"autoRenewal\",\n    \"status\": \"AMBER\",\n    \"title\": \"Automatic Renewal Clause\",\n    \"reason\": \"The auto-renewal is set to yes, which can automatically lock you into another term if notice deadlines are missed.\",\n    \"askTheLandlord\": \"Will you provide a written reminder notice prior to the auto-renewal deadline taking effect?\",\n    \"playbookId\": \"US-RENEW-01\"\n  }\n]",
+  "approvedExtract": {
+    "rentAmount": 1850,
+    "depositAmount": 4625,
+    "lateFeeAmount": 150,
+    "lateFeeGraceDays": 0,
+    "noticePeriodDays": 2700,
+    "currency": "USD",
+    "rentPeriod": "monthly",
+    "guestPolicy": "Guests may not stay more than three nights in any calendar month without written consent.",
+    "maintenanceResponsibility": "Tenant is responsible for all repairs to the premises and appliances except structural repairs to the roof and foundation.",
+    "earlyTerminationPenalty": "Tenant must pay an early termination fee equal to three months of rent plus rent owed through the date Landlord recovers possession.",
+    "rawNotes": "Tenant waives liability claims against Landlord and must maintain renters insurance with at least 100,000 in liability coverage. Tenant agrees to pay Landlord's attorney fees in any dispute.",
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Technology Package",
+        "amount": 45,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Community Amenity Fee",
+        "amount": 35,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Valet Trash Service",
+        "amount": 25,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Utility Billing Administration Fee",
+        "amount": 6.95,
+        "frequency": "monthly"
+      }
+    ],
+    "otherMoneyTerms": [
+      {
+        "name": "Daily Late Fee",
+        "amount": 20,
+        "notes": "Additional daily late charge until paid in full, up to a maximum of 450.00 total per month."
+      },
+      {
+        "name": "Administrative Processing Fee",
+        "amount": 250,
+        "notes": "Non-refundable move-in fee."
+      },
+      {
+        "name": "Lease Preparation Fee",
+        "amount": 95,
+        "notes": "Non-refundable move-in fee."
+      },
+      {
+        "name": "Unauthorized Occupant Fee",
+        "amount": 25,
+        "notes": "Per day charge for unauthorized occupants."
+      },
+      {
+        "name": "Pet Rent",
+        "amount": 50,
+        "notes": "Monthly fee per pet if approved."
+      }
+    ]
+  }
 }
