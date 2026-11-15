@@ -4,7 +4,7 @@
 
 Built for #BuildHybridAI 2026 with **Firebase AI Logic hybrid inference** (Web / Chrome). Not legal advice.
 
-- App: https://askportia.vercel.app (judges: https://askportia.vercel.app/?judge=1)
+- App: https://askportia.vercel.app (tool: https://askportia.vercel.app/app, judges: https://askportia.vercel.app/?judge=1)
 - License: Apache-2.0
 
 ## Why

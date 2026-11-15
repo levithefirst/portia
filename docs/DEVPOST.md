@@ -1,6 +1,6 @@
 # Devpost submission text (for Fluid to paste)
 
-Replace `https://askportia.vercel.app` and `<YOUTUBE_URL>` before submitting. Platform: **Web (Chrome)**.
+Replace `<YOUTUBE_URL>` before submitting. Platform: **Web (Chrome)**.
 
 ---
 
@@ -56,4 +56,4 @@ Portia flags patterns from a curated static playbook with hedged notes and publi
 
 ## Testing instructions
 
-Open https://askportia.vercel.app/?judge=1 in Chrome (Judge Mode: models pre-warmed on landing, the core loop is timed on the result card, and if the live cloud check is unavailable for the sample lease you will see a clearly labelled cached sample result while it retries). No login. Click **Load sample lease**, then **Extract fee map**. On a browser without Gemini Nano, accept the consent banner. Edit a field, click **Approve & check**, review the clause map and print the questions. To test on-device, use desktop Chrome 139+ with the flags in the README and click **Prepare on-device model** first.
+Open https://askportia.vercel.app/?judge=1 in Chrome. No login. Press the one button ("Run the sample lease", or on a browser without Gemini Nano "Send the sample to cloud Gemini and check", which is the consent). In about 5 to 8 seconds you get the clause map: 3 red, 6 amber, 0 green, true monthly cost $1,961.95, and a timed `Verdict in X.Xs` line. Judge Mode pre-warms the models on landing; if the live cloud check is unavailable for the sample lease you will see a clearly labelled cached sample result while it retries. For the manual path, open https://askportia.vercel.app/app?judge=0, load the sample or paste your own lease, extract, edit a field, approve and check, then print the questions. To test on-device, use desktop Chrome 139+ with the flags in the README and click **Prepare on-device model** first. The landing page at https://askportia.vercel.app explains the hybrid flow; the tool lives at `/app`.
