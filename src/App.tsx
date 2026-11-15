@@ -7,6 +7,7 @@ import { Privacy } from './components/Privacy'
 import { Results } from './components/Results'
 import { Footer, Header, routeFromPath, type Route } from './components/Shell'
 import { Hero } from './components/Hero'
+import { Landing } from './components/Landing'
 import type { AiEngine } from './lib/engine'
 import { missingEnv } from './lib/firebase'
 import { loadEngine } from './lib/getEngine'
@@ -592,8 +593,10 @@ export default function App() {
         Skip to content
       </a>
       <Header route={route} />
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-        {route === 'privacy' ? (
+      <main id="main" className={`mx-auto w-full flex-1 px-4 sm:px-6 ${route === 'home' ? 'max-w-6xl py-0' : 'max-w-6xl py-8'}`}>
+        {route === 'home' ? (
+          <Landing avail={avail} />
+        ) : route === 'privacy' ? (
           <Privacy />
         ) : (
           <div className="space-y-6">
@@ -602,7 +605,7 @@ export default function App() {
                 <summary className="cursor-pointer select-none">
                   <span className="font-mono text-[0.68rem] font-medium tracking-[0.08em] text-accent-text">JUDGE MODE</span>{' '}
                   <span className="text-text-secondary">pre-warmed, timed, labelled sample fallback</span>{' '}
-                  <a href="/?judge=0" className="ml-1">
+                  <a href="/app?judge=0" className="ml-1">
                     Turn off
                   </a>
                 </summary>
@@ -882,6 +885,7 @@ export default function App() {
         )}
       </main>
       <Footer>
+        {route === 'check' && (
         <label className="inline-flex items-center gap-2 text-text">
           <input
             type="checkbox"
@@ -895,6 +899,7 @@ export default function App() {
           />
           Remember my last approved extract on this device (JSON only, off by default)
         </label>
+        )}
       </Footer>
     </div>
   )

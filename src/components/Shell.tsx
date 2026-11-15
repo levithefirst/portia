@@ -2,23 +2,31 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { applyTheme, getTheme, type ThemePref } from '../lib/storage'
 import { IconMonitor, IconMoon, IconSun } from './icons'
 
-export type Route = 'check' | 'privacy'
+export type Route = 'home' | 'check' | 'privacy'
+
+const PATHS: Record<Route, string> = { home: '/', check: '/app', privacy: '/privacy' }
 
 export function navigate(to: Route) {
-  const path = to === 'privacy' ? '/privacy' : '/'
-  if (location.pathname !== path) history.pushState({}, '', path)
+  const path = PATHS[to]
+  if (location.pathname !== path || location.search) history.pushState({}, '', path)
   window.dispatchEvent(new PopStateEvent('popstate'))
   window.scrollTo({ top: 0 })
 }
 
+/** "/" is the landing page; the tool lives at /app (and /check). Any ?judge=1 URL opens the tool in Judge Mode. */
 export function routeFromPath(): Route {
-  return location.pathname.startsWith('/privacy') ? 'privacy' : 'check'
+  const p = location.pathname
+  if (p.startsWith('/privacy')) return 'privacy'
+  if (p.startsWith('/app') || p.startsWith('/check')) return 'check'
+  const q = new URLSearchParams(location.search)
+  if (q.get('judge') === '1' || (q.has('judge') && q.get('judge') !== '0')) return 'check'
+  return 'home'
 }
 
 function NavLink({ to, current, children }: { to: Route; current: Route; children: ReactNode }) {
   return (
     <a
-      href={to === 'privacy' ? '/privacy' : '/'}
+      href={PATHS[to]}
       aria-current={current === to ? 'page' : undefined}
       onClick={(e) => {
         e.preventDefault()
@@ -90,20 +98,33 @@ export function Header({ route }: { route: Route }) {
           className="no-underline"
           onClick={(e) => {
             e.preventDefault()
-            navigate('check')
+            navigate('home')
           }}
           aria-label="Portia home"
         >
           <Wordmark />
         </a>
         <nav aria-label="Main" className="flex items-center gap-1">
-          <NavLink to="check" current={route}>
-            Check a lease
-          </NavLink>
           <NavLink to="privacy" current={route}>
             Privacy
           </NavLink>
           <ThemeToggle />
+          {route === 'home' ? (
+            <a
+              href="/app"
+              className="btn btn-primary ml-1 px-3.5 py-1.5 text-sm no-underline"
+              onClick={(e) => {
+                e.preventDefault()
+                navigate('check')
+              }}
+            >
+              Check a lease
+            </a>
+          ) : (
+            <NavLink to="check" current={route}>
+              Check a lease
+            </NavLink>
+          )}
         </nav>
       </div>
     </header>

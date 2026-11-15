@@ -70,7 +70,18 @@ try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
     const errors = []
     page.on('pageerror', (e) => errors.push(String(e)))
+    // Landing page at "/", CTA reaches the tool at /app.
     await page.goto('http://localhost:4317/')
+    ok(await page.getByRole('heading', { level: 1 }).first().isVisible() && (await page.getByTestId('landing-sample').count()) === 1, 'L: landing page renders at /')
+    ok((await page.getByTestId('landing-monthly').innerText()) === '$1,961.95', 'L: landing sample shows $1,961.95 from the fixture')
+    const lc = await Promise.all(['RED', 'AMBER', 'GREEN'].map((k) => page.getByTestId(`landing-count-${k}`).innerText()))
+    ok(lc.join('/') === '3/6/0', `L: landing sample counts 3/6/0 (${lc.join('/')})`)
+    ok((await page.getByTestId('setup-state').count()) === 0, 'L: landing is not the tool')
+    await axe(page, 'landing')
+    await page.getByTestId('cta-check').click()
+    await page.getByTestId('setup-state').waitFor()
+    ok(new URL(page.url()).pathname === '/app', 'L: "Check a lease" CTA opens the tool at /app')
+    await page.goto('http://localhost:4317/app')
     ok(await page.getByTestId('setup-state').isVisible(), 'A: setup state explains missing Firebase config')
     ok(await page.getByText('Not legal advice.').first().isVisible(), 'A: "Not legal advice" visible in footer')
     ok(await page.getByTestId('extract').isDisabled(), 'A: Extract disabled without keys')
@@ -123,7 +134,7 @@ try {
   // ---------- B) fake engine, no Nano ----------
   {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-    await page.goto('http://localhost:4318/')
+    await page.goto('http://localhost:4318/app')
     await page.waitForTimeout(500)
     ok((await page.evaluate(() => window.__portiaWarmAt)) === undefined, 'B: no pre-warm outside Judge Mode')
     await page.getByRole('button', { name: 'Load sample lease' }).click()
@@ -183,6 +194,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
     const tLoad = Date.now()
     await page.goto(`http://localhost:4318/?judge=1&${query}`)
+    if (query === 'fakeCheck=ok') ok((await page.getByTestId('run-sample').waitFor({ timeout: 5000 }).then(() => true, () => false)) && (await page.getByTestId('judge-banner').isVisible()) && (await page.getByTestId('run-sample').isVisible()) && (await page.getByTestId('landing-sample').count()) === 0, 'L: /?judge=1 lands straight in the tool in Judge Mode')
     await page.waitForFunction(() => typeof window.__portiaWarmAt === 'number', null, { timeout: 3000 })
     const prewarmedBeforeTap = await page.evaluate(() => (window.__portiaCalls ?? []).length === 0)
     const btn = page.getByTestId('run-sample')
@@ -261,7 +273,7 @@ try {
   {
     // Manual path, NOT the sample (text edited), thin extract: Approve blocked until hand edits.
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
-    await page.goto('http://localhost:4318/?fakeExtract=thin')
+    await page.goto('http://localhost:4318/app?fakeExtract=thin')
     await page.getByRole('button', { name: 'Load sample lease' }).click()
     await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
     await page.getByTestId('extract').click()
@@ -308,7 +320,7 @@ try {
   {
     // 1280x800 fold on review: cost math and Approve visible without scrolling.
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
-    await page.goto('http://localhost:4318/')
+    await page.goto('http://localhost:4318/app')
     await page.getByRole('button', { name: 'Load sample lease' }).click()
     await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
     await page.getByTestId('extract').click()
