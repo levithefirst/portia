@@ -6,7 +6,7 @@ import { Intake, toPage } from './components/Intake'
 import { Privacy } from './components/Privacy'
 import { Results } from './components/Results'
 import { Footer, Header, routeFromPath, type Route } from './components/Shell'
-import { IconChip, IconCloud, IconLock } from './components/icons'
+import { Hero } from './components/Hero'
 import type { AiEngine } from './lib/engine'
 import { missingEnv } from './lib/firebase'
 import { loadEngine } from './lib/getEngine'
@@ -579,6 +579,12 @@ export default function App() {
   const setupMissing = engine === null ? missingEnv() : []
   const aiReady = !!engine
   const stepIndex = STEPS.findIndex((s) => s.id === step)
+  const ONECLICK = !!(judge && engine && !batchMode && !showConsent)
+  const ONECLICK_LABEL = avail === 'available' ? 'Run the sample lease' : 'Send the sample to cloud Gemini and check'
+  const ONECLICK_HINT =
+    avail === 'available'
+      ? 'One click: loads the bundled sample lease, extracts it on this device with Gemini Nano, and checks the approved JSON in the cloud.'
+      : 'Gemini Nano is not available here, so this click is your consent to send the bundled sample lease (not your data) to cloud Gemini via Firebase AI Logic, then check it.'
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -591,53 +597,11 @@ export default function App() {
           <Privacy />
         ) : (
           <div className="space-y-6">
-            {step === 'intake' && !batchMode && (
-              <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-end">
-                <div>
-                  <h1 className="font-serif text-4xl leading-[1.08] font-medium tracking-tight sm:text-5xl">
-                    See what a lease really costs before you sign.
-                  </h1>
-                  <p className="mt-3 max-w-xl text-text-secondary" data-testid="hero-line">
-                    {heroLine(avail)}
-                  </p>
-                </div>
-                <ol className="grid gap-2 text-sm" aria-label="How Portia works">
-                  <li className="flex items-center gap-3">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-accent text-on-accent">
-                      <IconChip width={15} height={15} />
-                    </span>
-                    <span>
-                      <strong>Extract on-device.</strong>{' '}
-                      {avail === 'available'
-                        ? 'Gemini Nano builds a JSON fee map.'
-                        : 'With Gemini Nano in desktop Chrome; here, cloud Gemini only with your consent.'}
-                    </span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle bg-surface">
-                      <IconLock width={15} height={15} />
-                    </span>
-                    <span>
-                      <strong>You review and approve.</strong> Edit anything; nothing leaves yet.
-                    </span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle bg-surface">
-                      <IconCloud width={15} height={15} />
-                    </span>
-                    <span>
-                      <strong>Check in the cloud.</strong> Only the approved JSON is scored red, amber, green.
-                    </span>
-                  </li>
-                </ol>
-              </div>
-            )}
-
             {judge && (
-              <details className="no-print rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-sm" data-testid="judge-banner">
-                <summary className="cursor-pointer">
-                  <span className="font-mono text-xs font-medium text-accent-text">JUDGE MODE</span> pre-warmed, timed, labelled
-                  sample fallback{' '}
+              <details className="judge-bar no-print rounded-2xl border border-border-subtle bg-surface px-3.5 py-1.5 text-[0.8rem] sm:rounded-full sm:open:rounded-xl" data-testid="judge-banner">
+                <summary className="cursor-pointer select-none">
+                  <span className="font-mono text-[0.68rem] font-medium tracking-[0.08em] text-accent-text">JUDGE MODE</span>{' '}
+                  <span className="text-text-secondary">pre-warmed, timed, labelled sample fallback</span>{' '}
                   <a href="/?judge=0" className="ml-1">
                     Turn off
                   </a>
@@ -651,17 +615,44 @@ export default function App() {
               </details>
             )}
 
+            {step === 'intake' && !batchMode && (
+              <Hero
+                line={heroLine(avail)}
+                onDevice={avail === 'available'}
+                run={
+                  ONECLICK ? (
+                    <div className="run-card mt-6 max-w-[38rem] rounded-2xl border border-accent/40 bg-surface p-4 sm:p-5" data-testid="one-click">
+                      <p className="eyebrow">Judge Mode · one click · timed</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-3">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-lg w-full sm:w-auto"
+                          onClick={runSampleOneClick}
+                          disabled={oneClickBusy || extracting}
+                          data-testid="run-sample"
+                        >
+                          {oneClickBusy || extracting ? 'Running the sample…' : ONECLICK_LABEL}
+                        </button>
+                      </div>
+                      <p className="hint mt-3 max-w-2xl">{ONECLICK_HINT}</p>
+                      <p className="hint mt-1">Or use the manual path below with your own lease.</p>
+                    </div>
+                  ) : null
+                }
+              />
+            )}
+
             <nav aria-label="Progress" className="no-print">
-              <ol className="flex flex-wrap items-center gap-2 text-sm">
+              <ol className="stepper flex items-center gap-1.5 text-[0.8rem] sm:gap-2 sm:text-sm">
                 {STEPS.map((s, i) => (
-                  <li key={s.id} className="flex items-center gap-2">
+                  <li key={s.id} className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                     <span
                       aria-current={s.id === step ? 'step' : undefined}
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 ${s.id === step ? 'border-text text-text font-semibold' : i < stepIndex ? 'border-border-subtle text-text' : 'border-border-subtle text-text-secondary'}`}
+                      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 sm:px-3 ${s.id === step ? 'border-text bg-text text-bg font-semibold' : i < stepIndex ? 'border-border-subtle text-text' : 'border-border-subtle text-text-secondary'}`}
                     >
-                      <span className="font-mono text-xs">{i + 1}</span> {s.label}
+                      <span className="font-mono text-[0.68rem]">{i < stepIndex ? '✓' : i + 1}</span> {s.label}
                     </span>
-                    {i < STEPS.length - 1 && <span className="text-text-secondary" aria-hidden="true">→</span>}
+                    {i < STEPS.length - 1 && <span className={`h-px w-3 sm:w-8 ${i < stepIndex ? 'bg-text' : 'bg-border-subtle'}`} aria-hidden="true" />}
                   </li>
                 ))}
               </ol>
@@ -716,19 +707,6 @@ export default function App() {
                     </p>
                   )}
                   <Intake
-                    oneClick={
-                      judge && engine && !batchMode && !showConsent
-                        ? {
-                            label: avail === 'available' ? 'Run the sample lease' : 'Send the sample to cloud Gemini and check',
-                            hint:
-                              avail === 'available'
-                                ? 'One click: loads the bundled sample lease, extracts it on this device with Gemini Nano, and checks the approved JSON in the cloud.'
-                                : 'Gemini Nano is not available here, so this click is your consent to send the bundled sample lease (not your data) to cloud Gemini via Firebase AI Logic, then check it.',
-                            busy: oneClickBusy || extracting,
-                            onRun: runSampleOneClick,
-                          }
-                        : undefined
-                    }
                     leaseText={leaseText}
                     onLeaseText={setLeaseText}
                     pages={pages}

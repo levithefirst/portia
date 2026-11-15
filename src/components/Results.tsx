@@ -3,7 +3,7 @@ import type { Playbook } from '../lib/playbooks'
 import { findRule } from '../lib/playbooks'
 import { formatMoney, monthlyRent, sortFindings, totalMonthlyFees } from '../lib/rules'
 import type { DisplayFinding, LeaseExtract, SourceLabel, Status } from '../lib/types'
-import { SourceBadge, StatusPill } from './Badges'
+import { SourceBadge, StatusPill, statusLabel } from './Badges'
 import { IconCopy, IconPrint } from './icons'
 import { verdictTimeText } from '../lib/judge'
 
@@ -47,6 +47,7 @@ interface Props {
 }
 
 const ALL: Status[] = ['RED', 'AMBER', 'GREEN']
+const slug = (k: string) => k.replace(/[^a-zA-Z0-9_-]/g, '-')
 
 function useElapsed(startedAt: number | null, running: boolean): number {
   const [now, setNow] = useState(() => performance.now())
@@ -85,20 +86,26 @@ export function Results(p: Props) {
     }
   }
 
-  function Card({ f }: { f: DisplayFinding }) {
+  function Card({ f, i }: { f: DisplayFinding; i: number }) {
     const rule = findRule(p.playbook, f.playbookId)
     const bar = f.status === 'RED' ? 'border-l-red-solid' : f.status === 'AMBER' ? 'border-l-amber-solid' : 'border-l-green-solid'
     return (
-      <li className={`paper break-inside-avoid border-l-4 p-4 sm:p-5 ${bar}`} data-status={f.status}>
+      <li
+        id={`f-${slug(f.key)}`}
+        className={`finding paper break-inside-avoid border-l-4 p-4 sm:p-6 ${bar}`}
+        data-status={f.status}
+        style={{ ['--i' as string]: i }}
+      >
         <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[0.7rem] text-text-secondary" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
           <StatusPill status={f.status} />
           <span className="font-mono text-xs text-text-secondary">{f.field}</span>
-          <span className="ml-auto text-xs text-text-secondary">
+          <span className="w-full text-xs text-text-secondary sm:ml-auto sm:w-auto">
             {f.origin === 'playbook-rule' ? 'Playbook rule · ran in your browser' : f.key.startsWith('cached:') ? 'Cloud review · cached sample' : 'Cloud review · Gemini'}
           </span>
         </div>
-        <h3 className="mt-2 font-serif text-lg font-medium leading-snug">{f.title}</h3>
-        <p className="mt-1 text-sm leading-relaxed">{f.reason}</p>
+        <h3 className="mt-3 font-serif text-[1.3rem] font-medium leading-snug tracking-tight">{f.title}</h3>
+        <p className="mt-1.5 max-w-[72ch] text-[0.92rem] leading-relaxed">{f.reason}</p>
         {f.cloudNote && (
           <p className="mt-2 text-sm text-text-secondary">
             <span className="font-medium text-text">Cloud review:</span> {f.cloudNote}
@@ -106,12 +113,15 @@ export function Results(p: Props) {
         )}
         {f.downgraded && <p className="mt-2 text-xs text-text-secondary">Shown as amber: the cloud review rated this red but cited no playbook rule.</p>}
         {f.askTheLandlord && f.status !== 'GREEN' && (
-          <div className="mt-3 flex items-start gap-2 rounded-lg bg-bg px-3 py-2">
-            <p className="flex-1 text-sm">
-              <span className="eyebrow block">Ask the landlord</span>“{f.askTheLandlord}”
+          <div className="ask mt-4 flex items-start gap-3 rounded-r-lg bg-bg py-2.5 pr-2 pl-3.5">
+            <p className="flex-1 font-serif text-[1.02rem] leading-snug">
+              <span className="eyebrow mb-1 block font-sans">Ask the landlord</span>“{f.askTheLandlord}”
             </p>
-            <button type="button" className="no-print btn btn-ghost p-1.5" onClick={() => copy(f.askTheLandlord, f.key)} aria-label="Copy question">
+            <button type="button" className="no-print btn btn-ghost gap-1.5 px-2 py-1.5 text-xs" onClick={() => copy(f.askTheLandlord, f.key)} aria-label="Copy question">
               <IconCopy />
+              <span aria-hidden="true" className={copied === f.key ? 'text-green-text' : 'text-text-secondary'}>
+                {copied === f.key ? 'Copied' : 'Copy'}
+              </span>
               <span className="sr-only" aria-live="polite">
                 {copied === f.key ? 'Copied' : ''}
               </span>
@@ -132,20 +142,21 @@ export function Results(p: Props) {
     )
   }
 
+  const total = rules.length
   return (
     <section aria-labelledby="results-title" className="space-y-5">
-      <div className="paper p-4 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="paper overflow-hidden p-4 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div>
-            <h2 id="results-title" className="font-serif text-2xl font-medium">
+            <p className="eyebrow">
+              Checked against <span className="text-text">{p.playbook.id}</span>
+              <span className="hidden sm:inline normal-case tracking-normal"> · {p.playbook.jurisdiction}</span>
+            </p>
+            <h2 id="results-title" className="mt-1 font-serif text-[1.9rem] leading-tight font-medium tracking-tight sm:text-[2.3rem]">
               Clause map
             </h2>
-            <p className="hint mt-0.5">
-              Checked against <span className="font-mono">{p.playbook.id}</span>
-              <span className="hidden sm:inline"> ({p.playbook.jurisdiction})</span>.
-            </p>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 sm:justify-end">
             <SourceBadge source={p.extractSource} step="Extract" nanoMissing={p.nanoMissing} />
             {p.checkSource && <SourceBadge source={p.checkSource} step="Check" />}
           </div>
@@ -158,44 +169,66 @@ export function Results(p: Props) {
           </p>
         ) : null}
 
-        <div className={`mt-3 grid grid-cols-3 gap-2 sm:max-w-xl ${preliminary ? 'opacity-75' : ''}`} role="group" aria-label="Filter findings by status">
-          {counts.map(([s, n]) => {
-            const on = show.includes(s)
-            return (
-              <button
-                key={s}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setShow(on ? show.filter((x) => x !== s) : [...show, s])}
-                className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left sm:p-3 ${on ? 'border-border' : 'border-border-subtle opacity-60'}`}
-                data-testid={`count-${s}`}
-              >
-                <StatusPill status={s} compact />
-                <span className="font-mono text-2xl font-medium">{n}</span>
-              </button>
-            )
-          })}
+        <div className={`mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] ${preliminary ? 'opacity-75' : ''}`}>
+          {rent ? (
+            <div className="cost-band flex flex-col justify-between gap-3 p-4 sm:p-5" data-testid="results-true-monthly">
+              <p className="font-mono text-[0.68rem] uppercase tracking-[0.08em] muted">True monthly cost:</p>
+              <p>
+                <strong className="cost-figure block text-[2.6rem] sm:text-[3.4rem]">{formatMoney(rent + fees, p.extract.currency)}</strong>
+                <span className="mt-2 block font-mono text-[0.75rem] muted">
+                  ({formatMoney(rent, p.extract.currency)} rent + {formatMoney(fees, p.extract.currency)} required fees)
+                </span>
+              </p>
+            </div>
+          ) : null}
+
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Filter findings by status">
+              {counts.map(([s, n]) => {
+                const on = show.includes(s)
+                const tone = s === 'RED' ? 'text-red-text' : s === 'AMBER' ? 'text-amber-text' : 'text-green-text'
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setShow(on ? show.filter((x) => x !== s) : [...show, s])}
+                    className={`tile flex flex-col items-start gap-2 rounded-xl border bg-bg p-2.5 text-left sm:p-3.5 ${on ? 'border-border' : 'border-border-subtle opacity-60'}`}
+                    data-testid={`count-${s}`}
+                  >
+                    <StatusPill status={s} compact />
+                    <span className={`num font-mono font-medium ${tone}`}>{n}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {total > 0 && (
+              <div>
+                <ol className="map-strip flex h-2.5 gap-[3px]" aria-label="Jump to a finding">
+                  {rules.map((f, i) => (
+                    <li key={f.key} className="flex-1" style={{ ['--i' as string]: i }}>
+                      <a href={`#f-${slug(f.key)}`} className={`seg-${f.status}`} aria-label={`${statusLabel(f.status)}: ${f.title}`} title={f.title} />
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-1.5 font-mono text-[0.68rem] text-text-secondary">
+                  {total} playbook {total === 1 ? 'flag' : 'flags'}, most serious first
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {verdict && (
-          <p className="mt-3 font-mono text-[0.8rem] sm:text-sm" data-testid="verdict-time">
+          <p className="mt-4 font-mono text-[0.78rem] text-text sm:text-[0.82rem]" data-testid="verdict-time">
             {verdict}
           </p>
         )}
 
-        {rent ? (
-          <p className="mt-2 text-sm" data-testid="results-true-monthly">
-            True monthly cost: <strong className="font-mono">{formatMoney(rent + fees, p.extract.currency)}</strong>{' '}
-            <span className="text-text-secondary">
-              ({formatMoney(rent, p.extract.currency)} rent + {formatMoney(fees, p.extract.currency)} required fees)
-            </span>
-          </p>
-        ) : null}
+        {p.pinnedNote && <p className="mt-1.5 text-xs text-text-secondary">{p.pinnedNote}</p>}
 
-        {p.pinnedNote && <p className="mt-2 text-xs text-text-secondary">{p.pinnedNote}</p>}
-
-        <p className="mt-4 rounded-lg border border-border-subtle bg-bg px-3 py-2 text-sm">
-          <strong>Not legal advice.</strong> Red means "likely worth pushing back on before signing", amber means "ask about this",
+        <p className="mt-4 border-t border-border-subtle pt-3 text-[0.82rem] leading-relaxed text-text-secondary">
+          <strong className="text-text">Not legal advice.</strong> Red means "likely worth pushing back on before signing", amber means "ask about this",
           green means "looks typical". Counts come from the curated static playbook rules, not from the law where you live.
         </p>
       </div>
@@ -253,8 +286,8 @@ export function Results(p: Props) {
       {!p.cloudReviewAvailable && <p className="hint">Cloud review is not configured in this build, so only in-browser playbook rules are shown.</p>}
 
       <ol className="space-y-3" aria-label="Findings" data-testid="findings">
-        {visible.map((f) => (
-          <Card key={f.key} f={f} />
+        {visible.map((f, i) => (
+          <Card key={f.key} f={f} i={i} />
         ))}
         {visible.length === 0 && (
           <li className="paper p-5 text-sm text-text-secondary">
@@ -272,8 +305,8 @@ export function Results(p: Props) {
             <p className="hint">Extra points from the cloud review. Not counted in the tiles above.</p>
           </div>
           <ol className="space-y-3">
-            {commentary.map((f) => (
-              <Card key={f.key} f={f} />
+            {commentary.map((f, i) => (
+              <Card key={f.key} f={f} i={i} />
             ))}
           </ol>
         </section>

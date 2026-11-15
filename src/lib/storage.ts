@@ -62,6 +62,9 @@ export function getTheme(): ThemePref {
 
 export function applyTheme(t: ThemePref) {
   const root = document.documentElement
+  // Swap every token in one frame: no half-light, half-dark colour transitions.
+  root.classList.add('theme-switching')
+  setTimeout(() => root.classList.remove('theme-switching'), 50)
   if (t === 'system') delete root.dataset.theme
   else root.dataset.theme = t
   safe(() => {

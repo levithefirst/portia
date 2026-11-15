@@ -68,8 +68,8 @@ export function Wordmark() {
 
 export function Header({ route }: { route: Route }) {
   return (
-    <header className="no-print border-b border-border-subtle">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+    <header className="site-header no-print border-b border-border-subtle">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
         <a
           href="/"
           className="no-underline"
