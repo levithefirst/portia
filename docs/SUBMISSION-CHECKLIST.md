@@ -21,7 +21,7 @@ Legend: **Repo** = done in code/docs. **Handoff #n** = Portia bot step in `docs/
 | Demo video, 3 min max, English, public on YouTube, shows the platform | `docs/DEMO-SCRIPT.md` | Fluid (Handoff #9) |
 | First 30 seconds: who, problem, how Firebase AI Logic makes it work | `docs/DEMO-SCRIPT.md` 0:00 to 0:30 | Repo script; Fluid records |
 | Functionality matches the video | Script only uses shipped features; no faked badges | Fluid |
-| Hosted URL (strongly encouraged) | `vercel.json`; URL recorded after deploy | Handoff #7 |
+| Hosted URL (strongly encouraged) | https://askportia.vercel.app, judges link `/?judge=1` | Done |
 | Free to evaluate, no login | No account; Gemini Developer API free tier | Repo |
 | All materials in English | UI and docs in English | Repo |
 | No secrets, keys, debug tokens or PII in repo/form | `.gitignore`, `.env.example` blank, secret grep clean (below) | Repo |
@@ -32,18 +32,18 @@ Legend: **Repo** = done in code/docs. **Handoff #n** = Portia bot step in `docs/
 
 | Criterion | Evidence in Portia |
 | --- | --- |
-| **1. Technological Implementation**: how well built, how effectively it uses Firebase AI Logic hybrid inference | Two model instances with different inference modes per feature (the FAQ's recommended pattern). Structured output on both sides via one `Schema` (`responseConstraint` + `responseSchema`). `initializeDeviceModel` on a gesture with progress. Privacy gate that mirrors the SDK's on-device checks to block silent fallback (`src/lib/onDevice.ts`, `src/lib/pipeline.ts`). `inferenceSource` badges. App Check. Deterministic in-browser rule engine plus cloud review merge; uncited reds capped. 21 unit tests and a 43-check Playwright + axe smoke test, including a Judge Mode 10-second loop with the cloud mocked to fail. Judge Mode pre-warms the models and times the loop. |
+| **1. Technological Implementation**: how well built, how effectively it uses Firebase AI Logic hybrid inference | Two model instances with different inference modes per feature (the FAQ's recommended pattern). Structured output on both sides via one `Schema` (`responseConstraint` + `responseSchema`). `initializeDeviceModel` on a gesture with progress. Privacy gate that mirrors the SDK's on-device checks to block silent fallback (`src/lib/onDevice.ts`, `src/lib/pipeline.ts`). `inferenceSource` badges. App Check. Deterministic in-browser rule engine plus cloud review merge; uncited reds capped. 27 unit tests and a 63-check Playwright + axe smoke test, including a Judge Mode 10-second loop with the cloud mocked to fail. Judge Mode pre-warms the models and times the loop. |
 | **2. Design**: complete, coherent product, not a proof of concept | Three-step flow (Document > Review > Clause map), editable extract, true monthly cost, printable question list, light/dark/phone layouts, ink-on-paper theme with semantic status colors plus icons and text labels, empty/loading/error/retry/download states, Privacy page, setup state that still works without keys. |
 | **3. Potential Impact**: credible, specific case for a real audience, demonstrated | Renters before signing. Verified stats (Furth-Matzkin 2017; Weightmans 2024; AppFolio 2026) and FTC enforcement ($49.75M Progress Residential, $48M Invitation Homes). Playbooks for the US, England & Wales, Lagos, and a general junk-fee pack. Works on a Pixel 7 via consent. |
 | **4. Quality of the Idea**: creative, non-obvious use of Firebase AI Logic; understanding of the problem | Hybrid split by data sensitivity: the private document stays on-device; only a user-approved, minimal JSON reaches the cloud. Output is a structured fee map with citations and landlord questions, not a summary. Honest about the fallback trap in PREFER_ON_DEVICE and designs around it. |
 
-## Self-verification (Milestone 5 + Addendum 2), run 2026-11-14
+## Self-verification (Milestone 5 + Addenda 2 and 3), run 2026-11-15
 
 | Check | Result |
 | --- | --- |
 | `npm ci && npm run build` | PASS |
-| `npm test` (vitest, 21 tests) | PASS |
-| `npm run test:smoke` (43 checks incl. axe on intake, review, results light/dark, consent, privacy, and the Judge Mode 10 s loop with cloud ok / failing / slow) | PASS |
+| `npm test` (vitest, 27 tests) | PASS |
+| `npm run test:smoke` (63 checks incl. axe; Judge Mode one click to full verdict under 10 s with cloud OK and failing; identical counts over 5 runs; Approve blocked on thin extract; no Extract button under consent; 412 px and 1280x800 folds) | PASS |
 | Judge Mode: cached result only for the unmodified sample, labelled "Cached sample result (live check unavailable)", live retry + swap, elapsed time, pre-warm | PASS (unit + smoke) |
 | No API keys, debug tokens or secrets in git (`git grep` for `AIza`, `6L`-style site keys, private keys, tokens) | PASS |
 | Repo still private; Claude Code did not change visibility | PASS (flip is Handoff #8 after Fluid's OK) |
@@ -56,6 +56,25 @@ Legend: **Repo** = done in code/docs. **Handoff #n** = Portia bot step in `docs/
 | PDF rejected; Not legal advice visible; fixtures (text + JPEG + PNG) with junk fees, steep late fee, auto-renewal | PASS |
 | Docs: SDK-NOTES, HANDOFF-PORTIA, DEMO-SCRIPT, DEVPOST, SUBMISSION-CHECKLIST, README, Privacy page | PASS |
 | No Devpost submission, no video published, no secrets printed | PASS |
-| Public HTTPS URL | **BLOCKED** until Handoff #3, #5, #7 |
-| Recorded cloud verdict in `src/fixtures/sample-verdict.json` (currently placeholder; fallback shows playbook rules only) | **BLOCKED** until Handoff #7b |
-| Live ON_DEVICE run against `portia-f1dbe` | **BLOCKED** until Handoff #7 (or #6 locally) and a Chrome with Nano |
+| Public HTTPS URL | PASS: https://askportia.vercel.app (Judge Mode: `/?judge=1`) |
+| Recorded cloud verdict in `src/fixtures/sample-verdict.json` | PASS: recorded 2026-11-14 from a live `in_cloud` run (its notice-period misread is not shown; see HANDOFF 7b) |
+| Public repo flip + license in About | **BLOCKED** on Fluid's OK (Handoff #8) |
+| Video + Devpost submission | **BLOCKED**: Fluid only (Handoff #9) |
+| ON_DEVICE capture on Nano-enabled desktop Chrome | **BLOCKED**: Fluid, for the video (Handoff #9.1) |
+
+## Addendum 3 (win fixes) status
+
+| # | Fix | Where | Status |
+| --- | --- | --- | --- |
+| 1 | Thin sample extract retried once, then labelled bundled fallback; never a 0-finding map | `src/App.tsx` (`doExtract`), `src/lib/judge.ts` (`isThinExtract`) | PASS |
+| 2 | One-click "Run the sample lease" (consent button when no Nano) | `src/components/Intake.tsx`, `src/App.tsx` (`runSampleOneClick`) | PASS |
+| 3 | Approve blocked below the fullness bar unless hand-edited | `src/components/ExtractEditor.tsx` | PASS |
+| 4 | Hero tells the truth when Nano is missing | `src/components/DeviceStatus.tsx` (`heroLine`), `src/App.tsx` | PASS |
+| 5 | Deterministic sample counts (3 red / 6 amber / 0 green); rules are the count source, cloud is commentary | `src/lib/judge.ts`, `src/lib/rules.ts`, `src/components/Results.tsx` | PASS |
+| 6 | Preliminary tiles with live timer; verdict line only when final | `src/components/Results.tsx` | PASS |
+| 7 | Only "Send to cloud Gemini" and "Cancel" while consent is open | `src/App.tsx` | PASS |
+| 8 | Plain-language badges (raw inferenceSource in tooltip); one-line Judge bar | `src/components/Badges.tsx`, `src/App.tsx` | PASS |
+| 9 | Checklist and handoff match reality | this file, `docs/HANDOFF-PORTIA.md` | PASS |
+| 10 | Glanceable review: cost math + Approve above the 1280x800 fold | `src/components/ExtractEditor.tsx` | PASS |
+
+Copy note: the requested strings with an em dash are rendered with a colon or full stop ("Preliminary: playbook rules in your browser", "Extracted in the cloud. Gemini Nano is not on this device"), per Fluid's standing no-em-dash preference.

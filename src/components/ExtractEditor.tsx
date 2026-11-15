@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { cleanExtract } from '../lib/pipeline'
 import { formatMoney, monthlyRent, oneTimeFees, totalMonthlyFees } from '../lib/rules'
 import type { LeaseExtract, MandatoryFee, OtherMoneyTerm, ScalarField, SourceLabel } from '../lib/types'
@@ -18,7 +18,15 @@ interface Props {
   onBack: () => void
   onAddBatch: () => void
   canAddBatch: boolean
+  /** Below the fullness bar (see isThinExtract). Approve is blocked unless the user edited by hand. */
+  thin: boolean
+  editedByHand: boolean
+  nanoMissing: boolean
+  /** Label shown when Judge Mode pinned the bundled sample values. */
+  pinNote: ReactNode
 }
+
+export const THIN_MESSAGE = 'This extract is missing too many fields to check. Fill them in, or go back and extract again.'
 
 const LABELS: Record<string, string> = {
   currency: 'Currency',
@@ -43,6 +51,7 @@ function isEmpty(v: unknown) {
 
 export function ExtractEditor(p: Props) {
   const x = p.value
+  const [showFields, setShowFields] = useState(p.thin)
   const set = (k: ScalarField, v: unknown) => p.onChange({ ...x, [k]: v === '' ? undefined : v })
   const setNum = (k: ScalarField, raw: string) => set(k, raw === '' ? undefined : Number(raw))
   const toggleUnsure = (f: string) => p.onUnsure(p.unsure.includes(f) ? p.unsure.filter((u) => u !== f) : [...p.unsure, f])
@@ -96,9 +105,11 @@ export function ExtractEditor(p: Props) {
     p.onChange({ ...x, otherMoneyTerms: list })
   }
 
-  return (
-    <section aria-labelledby="review-title" className="space-y-5">
-      <div className="paper p-5 sm:p-6">
+  const filledCount = Object.keys(LABELS).filter((f) => !isEmpty((x as Record<string, unknown>)[f])).length
+  const approveBlocked = p.thin && !p.editedByHand
+
+  const header = (
+    <div className="paper p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="eyebrow">Step 2</p>
@@ -110,14 +121,29 @@ export function ExtractEditor(p: Props) {
               JSON is sent for review: no lease text, no photos.
             </p>
           </div>
-          <SourceBadge source={p.source} step="Extract" />
+          <SourceBadge source={p.source} step="Extract" nanoMissing={p.nanoMissing} />
         </div>
-
-        {missingCount > 0 && (
-          <p className="mt-4 text-sm text-amber-text" role="status">
-            {missingCount} field{missingCount > 1 ? 's' : ''} empty. You can still approve.
+        {p.pinNote && (
+          <div className="mt-3 rounded-lg border border-border bg-bg px-3 py-2 text-sm" data-testid="pin-note">
+            {p.pinNote}
+          </div>
+        )}
+        {p.thin ? (
+          <p className="mt-4 rounded-lg border border-amber-solid bg-amber-bg px-3 py-2 text-sm text-amber-text" role="alert" data-testid="thin-warning">
+            {THIN_MESSAGE}
+            {p.editedByHand && ' You have edited fields by hand, so you can approve anyway.'}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm" data-testid="field-summary">
+            <strong>{filledCount} fields extracted</strong>, {p.unsure.length} marked not sure
+            {missingCount > 0 ? `, ${missingCount} empty` : ''}.
           </p>
         )}
+    </div>
+  )
+
+  const form = (
+      <div className="paper p-5 sm:p-6" data-testid="field-form">
 
         <div className="mt-5 grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
           {row(
@@ -212,9 +238,10 @@ export function ExtractEditor(p: Props) {
           />
         </div>
       </div>
+  )
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
-        <div className="paper p-5">
+  const costPanel = (
+        <div className="paper p-5" data-testid="cost-panel">
           <p className="eyebrow">What it really costs</p>
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between gap-3">
@@ -232,12 +259,14 @@ export function ExtractEditor(p: Props) {
               </dd>
             </div>
             <div className="flex justify-between gap-3 pt-2">
-              <dt className="text-text-secondary">Due at signing (deposit + one-time fees + first month)</dt>
-              <dd className="font-mono">{rent ? formatMoney((x.depositAmount ?? 0) + once + rent + recurring, x.currency) : 'n/a'}</dd>
+              <dt className="text-text-secondary">Due at signing (deposit + first month with required fees)</dt>
+              <dd className="font-mono" data-testid="due-at-signing">{rent ? formatMoney((x.depositAmount ?? 0) + once + rent + recurring, x.currency) : 'n/a'}</dd>
             </div>
           </dl>
         </div>
+  )
 
+  const payloadPreview = (
         <details className="paper p-5" data-testid="payload-preview">
           <summary className="cursor-pointer text-sm font-semibold">Exactly what "Approve &amp; check" sends to the cloud</summary>
           <p className="hint mt-2">
@@ -247,10 +276,11 @@ export function ExtractEditor(p: Props) {
             {JSON.stringify(payload, null, 2)}
           </pre>
         </details>
-      </div>
+  )
 
+  const actionsBar = (
       <div className="no-print flex flex-wrap items-center gap-3">
-        <button type="button" className="btn btn-primary" onClick={p.onApprove} disabled={p.busy} data-testid="approve">
+        <button type="button" className="btn btn-primary" onClick={p.onApprove} disabled={p.busy || approveBlocked} data-testid="approve" aria-describedby={p.thin ? 'thin-msg' : undefined}>
           {p.busy ? 'Checking…' : p.cloudReviewAvailable ? 'Approve & check' : 'Approve & run playbook checks'}
         </button>
         <button type="button" className="btn" onClick={p.onBack} disabled={p.busy}>
@@ -261,10 +291,55 @@ export function ExtractEditor(p: Props) {
             Add another batch
           </button>
         )}
+        {approveBlocked && (
+          <p id="thin-msg" className="w-full text-sm text-amber-text">
+            {THIN_MESSAGE}
+          </p>
+        )}
         {!p.cloudReviewAvailable && (
           <p className="hint">Cloud review is not configured in this build. Playbook rules still run in your browser.</p>
         )}
       </div>
+  )
+
+  return (
+    <section aria-labelledby="review-title" className="space-y-5">
+      {header}
+      {p.thin ? (
+        <>
+          {form}
+          <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+            {costPanel}
+            {payloadPreview}
+          </div>
+          {actionsBar}
+        </>
+      ) : (
+        <>
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_1fr] lg:items-start">
+            {costPanel}
+            <div className="space-y-4">
+              {actionsBar}
+              {payloadPreview}
+            </div>
+          </div>
+          <div>
+            <button
+              type="button"
+              className="btn btn-ghost text-sm"
+              aria-expanded={showFields}
+              aria-controls="all-fields"
+              onClick={() => setShowFields((v) => !v)}
+              data-testid="toggle-fields"
+            >
+              {showFields ? 'Hide extracted fields' : `Show and edit all ${filledCount} extracted fields`}
+            </button>
+            <div id="all-fields" hidden={!showFields} className="mt-3">
+              {form}
+            </div>
+          </div>
+        </>
+      )}
     </section>
   )
 }

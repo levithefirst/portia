@@ -1,6 +1,6 @@
 # Handoff checklist: Portia bot (browser work)
 
-Status as of 2026-11-14 (end of build). The code is complete on branch `ccr-edea3bc3-ui3mci` of `levithefirst/portia` (private). Everything below happens in a browser. **The Portia bot does items 1 to 8. Fluid only does item 9.** Claude Code does none of these.
+Status as of 2026-11-15. The code is on `main` of `levithefirst/portia` (private) and auto-deploys to **https://askportia.vercel.app**. Items 1 to 7b are **DONE** (kept below for reference). Everything below happens in a browser. **The Portia bot did items 1 to 7b and does item 8. Fluid only does item 9.** Claude Code does none of these.
 
 Rules for every step:
 - Use the Google account **josephmorounfoluwa@gmail.com**. Fallback only if that account cannot be used: memequant@mail.grokbot.com. **Never use leviweb3x@gmail.com** for anything.
@@ -9,7 +9,7 @@ Rules for every step:
 
 Project ID: **portia-f1dbe** (already created). Firebase AI Logic on the Gemini Developer API and App Check with reCAPTCHA Enterprise were reported as already set up and enforced; items 2, 4 and 5 are verification steps in that case.
 
-Public app URL: **https://askportia.vercel.app**. Repo URL: https://github.com/levithefirst/portia (private until item 8).
+Public app URL: **https://askportia.vercel.app** (Judge Mode: https://askportia.vercel.app/?judge=1). Repo URL: https://github.com/levithefirst/portia (private until item 8).
 
 ---
 
@@ -49,7 +49,7 @@ Public app URL: **https://askportia.vercel.app**. Repo URL: https://github.com/l
    7. Smoke check in desktop Chrome: the page must **not** show "AI is not configured in this build". Load sample lease > Extract. Without Nano you should see the consent banner; accept, and the badge reads `Extract: IN_CLOUD`. Approve & check shows `Check: IN_CLOUD` and red/amber findings.
    8. Record the public HTTPS URL at the top of this file and in `docs/DEVPOST.md` (replace `https://askportia.vercel.app`), by editing on GitHub.
 
-7b. **Record the bundled Judge Mode verdict (one real cloud run).** The repo ships a placeholder `src/fixtures/sample-verdict.json` (`"recorded": false`). Until it is replaced, Judge Mode's cached fallback shows only the in-browser playbook rules and says so. Claude Code could not record it because the build environment has no Firebase keys.
+7b. **DONE (2026-11-14 18:03 UTC): bundled Judge Mode verdict recorded** in `src/fixtures/sample-verdict.json` from a live `in_cloud` run. Note: that run misread the notice period as 2700 days (the lease says 90). `src/fixtures/sample-extract.json` mirrors the recorded extract with notice corrected to 90, and recorded cloud commentary on any field whose value differs is not shown. Re-recording is optional; steps kept for reference:
    1. Open `https://<domain>/?judge=1&record=1` in desktop Chrome.
    2. Click **Load sample lease** and do not edit the text. Keep the playbook on **US-typical**.
    3. Click **Extract fee map** (accept the consent banner if shown). On the review screen, do not edit anything. Click **Approve & check**.
@@ -68,12 +68,10 @@ Public app URL: **https://askportia.vercel.app**. Repo URL: https://github.com/l
 
 ---
 
-## Current blockers
+## Current blockers (only these remain)
 
-| Item | Blocked on |
-| --- | --- |
-| Public HTTPS URL | items 3, 5, 7 |
-| Real recorded Judge Mode verdict (`src/fixtures/sample-verdict.json`) | item 7b (needs the live deploy) |
-| Live ON_DEVICE / IN_CLOUD run against `portia-f1dbe` | items 3, 5, 7 (or 6 for local) |
-| Public repo + license in About | item 8 (Fluid's OK) |
-| Video and Devpost submission | item 9 |
+| Item | Who | Notes |
+| --- | --- | --- |
+| Make the repo public (+ confirm Apache-2.0 in About) | Portia bot, item 8, only after Fluid's OK | Before the Devpost submit |
+| Video (3 min max, English, YouTube) and Devpost submission | Fluid only, item 9 | Follow `docs/DEMO-SCRIPT.md`; deadline Mon 30 Nov 2026, 11:00 PM WAT |
+| ON_DEVICE capture on Nano-enabled desktop Chrome | Fluid, item 9.1 | Needed for the on-device take of the video; no code change required |

@@ -93,7 +93,8 @@ try {
     ok(true, 'A: sample JPEG/PNG photos queue with ordered thumbnails')
 
     await page.getByRole('button', { name: 'Explore with the sample extract' }).click()
-    ok(await page.getByTestId('badge-Extract').innerText().then((t) => t.includes('SAMPLE DATA')), 'A: fixture extract is labelled SAMPLE DATA, not a model result')
+    ok((await page.getByTestId('badge-Extract').getAttribute('data-source')) === 'FIXTURE' && (await page.getByTestId('badge-Extract').innerText()).includes('Sample data'), 'A: fixture extract is labelled as sample data, not a model result')
+    ok(await page.getByTestId('cost-panel').isVisible(), 'A: full extract leads with the cost panel')
     await axe(page, 'review')
     await page.getByTestId('approve').click()
     await page.getByTestId('findings').waitFor()
@@ -129,19 +130,23 @@ try {
     await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
     await page.getByTestId('extract').click()
     await page.getByTestId('consent-banner').waitFor()
+    ok((await page.getByTestId('extract').count()) === 0, 'B: no Extract button while the consent banner is open')
     const callsBefore = await page.evaluate(() => (window.__portiaCalls ?? []).length)
     ok(callsBefore === 0, 'B: consent banner shown and NO model call made before consent')
     await axe(page, 'consent banner')
 
     await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
     await page.getByTestId('badge-Extract').waitFor()
-    ok((await page.getByTestId('badge-Extract').innerText()).includes('IN_CLOUD'), 'B: extract badge shows IN_CLOUD after consent')
+    ok((await page.getByTestId('badge-Extract').getAttribute('data-source')) === 'IN_CLOUD', 'B: extract badge source is IN_CLOUD after consent')
+    ok((await page.getByTestId('badge-Extract').innerText()).includes('Extracted in the cloud. Gemini Nano is not on this device'), 'B: plain-language extract badge')
+    ok((await page.getByTestId('badge-Extract').getAttribute('title')).includes('in_cloud'), 'B: raw inferenceSource in the badge tooltip')
 
-    // edit a field
+    // edit a field (fields are collapsed behind a toggle when the extract is full)
+    await page.getByTestId('toggle-fields').click()
     await page.locator('#f-rentAmount').fill('1900')
     await page.getByTestId('approve').click()
     await page.getByTestId('badge-Check').waitFor()
-    ok((await page.getByTestId('badge-Check').innerText()).includes('IN_CLOUD'), 'B: check badge shows IN_CLOUD')
+    ok((await page.getByTestId('badge-Check').getAttribute('data-source')) === 'IN_CLOUD' && (await page.getByTestId('badge-Check').innerText()).includes('Checked in the cloud'), 'B: check badge says "Checked in the cloud"')
 
     const calls = await page.evaluate(() => window.__portiaCalls)
     const check = calls.find((c) => c.kind === 'check')
@@ -170,65 +175,154 @@ try {
     await page.close()
   }
 
-  // ---------- C) Judge Mode, 10-second loop ----------
-  async function judgeLoop(fakeCheck, { editText = false } = {}) {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-    await page.goto(`http://localhost:4318/?judge=1&fakeCheck=${fakeCheck}`)
+  // ---------- C) Judge Mode, one click, 10-second loop ----------
+  const counts = async (page) =>
+    Promise.all(['RED', 'AMBER', 'GREEN'].map(async (k) => Number(await page.getByTestId(`count-${k}`).locator('span.font-mono').innerText())))
+
+  async function oneClick(query) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    const tLoad = Date.now()
+    await page.goto(`http://localhost:4318/?judge=1&${query}`)
     await page.waitForFunction(() => typeof window.__portiaWarmAt === 'number', null, { timeout: 3000 })
-    const calledBeforeTap = await page.evaluate(() => (window.__portiaCalls ?? []).length === 0)
-    await page.getByRole('button', { name: 'Load sample lease' }).click()
-    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
-    if (editText) await page.locator('#lease-text').press('End').then(() => page.keyboard.type(' Extra clause.'))
-    await page.getByTestId('extract').click()
-    await page.getByTestId('consent-banner').waitFor()
+    const prewarmedBeforeTap = await page.evaluate(() => (window.__portiaCalls ?? []).length === 0)
+    const btn = page.getByTestId('run-sample')
+    const label = await btn.innerText()
     const t0 = Date.now()
-    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
-    await page.getByTestId('approve').click()
-    return { page, t0, calledBeforeTap }
+    await btn.click()
+    await page.getByTestId('verdict-time').waitFor({ timeout: 10000 })
+    const ms = Date.now() - t0
+    const total = Date.now() - tLoad
+    return { page, ms, total, label, prewarmedBeforeTap }
   }
 
   {
-    const { page, t0, calledBeforeTap } = await judgeLoop('ok')
-    ok(calledBeforeTap, 'C(ok): models pre-warmed on landing before any tap, without a model call')
-    await page.getByTestId('badge-Check').waitFor({ timeout: 10000 })
-    const ms = Date.now() - t0
-    ok(ms <= 10000 && (await page.getByTestId('badge-Check').innerText()).includes('IN_CLOUD'), `C(ok): live verdict within 10 s (${ms} ms)`)
-    const t = await page.getByTestId('verdict-time').innerText()
-    ok(/^Verdict in \d+\.\ds, cloud \+ cloud/.test(t), `C(ok): elapsed time shown ("${t}")`)
-    ok((await page.getByTestId('cached-banner').count()) === 0, 'C(ok): no cached label when live succeeds')
+    const { page, ms, total, label, prewarmedBeforeTap } = await oneClick('fakeCheck=ok')
+    ok(prewarmedBeforeTap, 'C(ok): models pre-warmed on landing before any tap, without a model call')
+    ok(label === 'Send the sample to cloud Gemini and check', `C(ok): no-Nano one-click button is the consent ("${label}")`)
+    ok(ms <= 10000 && total <= 10000, `C(ok): one click to full verdict in ${ms} ms (${total} ms including page load)`)
+    ok((await page.getByTestId('badge-Check').getAttribute('data-source')) === 'IN_CLOUD', 'C(ok): live cloud check')
+    ok((await page.getByTestId('verdict-time').innerText()).includes('one click'), 'C(ok): one-click verdict time shown')
+    ok((await page.getByTestId('results-true-monthly').innerText()).includes('$1,961.95'), 'C(ok): full evidence: true monthly cost $1,961.95')
+    ok(JSON.stringify(await counts(page)) === '[3,6,0]', `C(ok): canonical counts 3/6/0 (${await counts(page)})`)
+    ok((await page.getByTestId('consent-banner').count()) === 0 && (await page.getByTestId('cached-banner').count()) === 0, 'C(ok): no consent banner and no cached label')
     await page.close()
   }
 
   {
-    const { page, t0 } = await judgeLoop('fail')
-    await page.getByTestId('cached-banner').waitFor({ timeout: 10000 })
-    const ms = Date.now() - t0
+    const { page, ms } = await oneClick('fakeCheck=fail')
     const banner = await page.getByTestId('cached-banner').innerText()
-    ok(ms <= 10000 && banner.includes('Cached sample result (live check unavailable)'), `C(fail): cached sample result labelled within 10 s (${ms} ms)`)
-    ok((await page.getByTestId('badge-Check').innerText()).includes('CACHED SAMPLE'), 'C(fail): check badge says CACHED SAMPLE')
+    ok(ms <= 10000 && banner.includes('Cached sample result (live check unavailable)'), `C(fail): labelled cached result within 10 s (${ms} ms)`)
+    ok((await page.getByTestId('badge-Check').getAttribute('data-source')) === 'CACHED', 'C(fail): check badge is the cached sample')
     ok((await page.getByTestId('verdict-time').innerText()).includes('cached sample'), 'C(fail): elapsed time names the cached source')
-    const red = Number(await page.getByTestId('count-RED').locator('span.font-mono').innerText())
-    ok(red >= 1, `C(fail): cached verdict still shows red flags (${red})`)
+    ok(JSON.stringify(await counts(page)) === '[3,6,0]', 'C(fail): same canonical counts 3/6/0')
+    ok((await page.getByText('Cloud review:').count()) >= 1, 'C(fail): recorded cloud review shown as commentary on rule cards (counts unchanged)')
+    ok((await page.getByText('2700').count()) === 0, 'C(fail): recorded commentary about the misread notice period is not shown')
     ok(banner.includes('Retrying the live check in the background'), 'C(fail): live check keeps retrying in the background')
     await page.close()
   }
 
   {
-    const { page, t0 } = await judgeLoop('slow')
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/?judge=1&fakeCheck=slow')
+    await page.getByTestId('run-sample').click()
+    await page.getByTestId('preliminary').waitFor({ timeout: 3000 })
+    const pre = await page.getByTestId('preliminary').innerText()
+    ok(pre.includes('Preliminary: playbook rules in your browser') && (await page.getByTestId('verdict-time').count()) === 0, 'C(slow): preliminary label and timer, no verdict line mid-check')
     await page.getByTestId('cached-banner').waitFor({ timeout: 10000 })
-    const ms = Date.now() - t0
-    ok(ms >= 7500 && ms <= 10000, `C(slow): cached result shown at the 8 s cutoff (${ms} ms)`)
     await page.getByTestId('live-swapped').waitFor({ timeout: 8000 })
-    ok((await page.getByTestId('badge-Check').innerText()).includes('IN_CLOUD') && (await page.getByTestId('cached-banner').count()) === 0, 'C(slow): live result swapped in when it arrived')
+    ok((await page.getByTestId('badge-Check').getAttribute('data-source')) === 'IN_CLOUD' && (await page.getByTestId('cached-banner').count()) === 0, 'C(slow): cached at 8 s, then live result swapped in')
     await page.close()
   }
 
   {
-    const { page } = await judgeLoop('fail', { editText: true })
+    const seen = []
+    for (let i = 0; i < 5; i++) {
+      const { page, ms } = await oneClick('fakeCheck=ok&fakeExtract=wild')
+      seen.push(`${(await counts(page)).join('/')}@${ms}`)
+      await page.close()
+    }
+    const uniq = new Set(seen.map((x) => x.split('@')[0]))
+    ok(uniq.size === 1 && seen[0].startsWith('3/6/0'), `C(stable): 5 one-click runs with drifting live extracts give identical counts (${seen.join(', ')})`)
+  }
+
+  {
+    const { page } = await oneClick('fakeCheck=ok&fakeExtract=thinonce')
+    const calls = await page.evaluate(() => window.__portiaCalls.filter((c) => c.kind === 'extract').length)
+    ok(calls === 2, 'C(thin once): thin sample extract retried once, then the verdict')
+    await page.close()
+  }
+
+  {
+    const { page } = await oneClick('fakeCheck=ok&fakeExtract=thin')
+    ok((await page.getByText('Fallback: the live extract was incomplete').count()) === 1 && JSON.stringify(await counts(page)) === '[3,6,0]', 'C(thin): still thin after retry, labelled bundled fallback, never a 0-finding map')
+    await page.close()
+  }
+
+  {
+    // Manual path, NOT the sample (text edited), thin extract: Approve blocked until hand edits.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/?fakeExtract=thin')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('thin-warning').waitFor()
+    ok(await page.getByTestId('approve').isDisabled(), 'C(thin manual): Approve disabled on a thin extract')
+    ok((await page.getByTestId('thin-warning').innerText()).includes('This extract is missing too many fields to check. Fill them in, or go back and extract again.'), 'C(thin manual): thin-extract copy shown')
+    await page.locator('#f-depositAmount').fill('4625')
+    ok(!(await page.getByTestId('approve').isDisabled()), 'C(thin manual): override allowed after editing fields by hand')
+    await page.close()
+  }
+
+  {
+    // Judge Mode, non-sample document, cloud failing: real error, never a cached result.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/?judge=1&fakeCheck=fail')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.locator('#lease-text').press('End')
+    await page.keyboard.type(' Extra clause.')
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    ok((await page.getByTestId('pin-note').count()) === 0, 'C(non-sample): user document is never pinned to fixture values')
+    await page.getByTestId('approve').click()
     await page.getByText('The cloud review failed.').waitFor({ timeout: 10000 })
     ok((await page.getByTestId('cached-banner').count()) === 0, 'C(non-sample): no cached result for a modified document, real error shown')
     await page.close()
   }
+
+  {
+    // 412px fold on results: stepper, counts and true monthly cost visible without scrolling.
+    const page = await browser.newPage({ viewport: { width: 412, height: 915 } })
+    await page.goto('http://localhost:4318/?judge=1&fakeCheck=ok')
+    await page.getByTestId('run-sample').click()
+    await page.getByTestId('verdict-time').waitFor({ timeout: 10000 })
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const inFold = await page.evaluate(() =>
+      ['count-RED', 'results-true-monthly'].every((id) => document.querySelector(`[data-testid="${id}"]`).getBoundingClientRect().bottom <= window.innerHeight),
+    )
+    ok(inFold, 'C(412px): counts and true monthly cost above the fold')
+    await page.close()
+  }
+
+  {
+    // 1280x800 fold on review: cost math and Approve visible without scrolling.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('cost-panel').waitFor()
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const inFold = await page.evaluate(() =>
+      ['cost-panel', 'approve', 'due-at-signing'].every((id) => document.querySelector(`[data-testid="${id}"]`).getBoundingClientRect().bottom <= window.innerHeight),
+    )
+    ok(inFold, 'C(1280x800): review fold shows the cost panel and Approve')
+    ok((await page.getByTestId('due-at-signing').innerText()) === '$6,586.95', 'C(1280x800): due at signing $6,586.95')
+    await page.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()

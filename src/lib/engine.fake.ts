@@ -26,6 +26,15 @@ function checkMode(): string {
 }
 let checkCount = 0
 
+/**
+ * ?fakeExtract=thin -> every extract is nearly empty. thinonce -> first extract thin, then full.
+ * wild -> full but with drifting values (notice 270 days, missing fees), like a flaky live run.
+ */
+function extractMode(): string {
+  return new URLSearchParams(location.search).get('fakeExtract') ?? 'ok'
+}
+let extractCount = 0
+
 function record(c: Call) {
   window.__portiaCalls = [...(window.__portiaCalls ?? []), c]
 }
@@ -47,6 +56,15 @@ export const fakeEngine: AiEngine = {
   async extract(prompt, images) {
     record({ kind: 'extract', prompt, imageCount: images.length })
     await new Promise((r) => setTimeout(r, 150))
+    const mode = extractMode()
+    extractCount++
+    if (mode === 'thin' || (mode === 'thinonce' && extractCount === 1)) {
+      return { text: JSON.stringify({ rentAmount: 1850, currency: 'USD' }), source: 'IN_CLOUD' }
+    }
+    if (mode === 'wild') {
+      const drift = extractCount % 2 === 0 ? 270 : 90
+      return { text: JSON.stringify({ ...sample, noticePeriodDays: drift, mandatoryFees: sample.mandatoryFees.slice(0, 2 + (extractCount % 3)) }), source: 'IN_CLOUD' }
+    }
     return { text: JSON.stringify(sample), source: 'IN_CLOUD' }
   },
   async check(prompt) {

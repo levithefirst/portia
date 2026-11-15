@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ConsentBanner } from './components/ConsentBanner'
-import { DeviceStatus } from './components/DeviceStatus'
+import { DeviceStatus, heroLine } from './components/DeviceStatus'
 import { ExtractEditor } from './components/ExtractEditor'
 import { Intake, toPage } from './components/Intake'
 import { Privacy } from './components/Privacy'
@@ -12,7 +12,7 @@ import { missingEnv } from './lib/firebase'
 import { loadEngine } from './lib/getEngine'
 import { fileToGenerativePart } from './lib/intake'
 import { checkDeviceAvailability, type DeviceAvailability } from './lib/onDevice'
-import { getPlaybook } from './lib/playbooks'
+import { getPlaybook, type Playbook } from './lib/playbooks'
 import { buildCheckPrompt, MAX_IMAGES_PER_EXTRACT } from './lib/prompts'
 import {
   cleanExtract,
@@ -31,6 +31,9 @@ import {
   isRecordMode,
   JUDGE_RETRY_DELAYS_MS,
   JUDGE_TIMEOUT_MS,
+  isThinExtract,
+  matchSample,
+  SAMPLE_EXTRACT,
   sleep,
   verdictFixture,
 } from './lib/judge'
@@ -49,6 +52,28 @@ import type { CachedInfo, LiveRetry } from './components/Results'
 import sampleExtract from './fixtures/sample-extract.json'
 
 type Step = 'intake' | 'review' | 'results'
+
+interface PinInfo {
+  kind: 'pinned' | 'fallback'
+  matched: number
+  total: number
+  differs: string[]
+  retried: boolean
+}
+
+interface ExtractOverride {
+  text: string
+  pages: PageImage[]
+  batchIds: string[]
+  sample: boolean
+}
+
+interface CheckCtx {
+  sample: boolean
+  original: string | null
+  playbook: Playbook
+  unsure: string[]
+}
 
 function friendlyError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e)
@@ -120,6 +145,12 @@ export default function App() {
   const [checkMs, setCheckMs] = useState<number | null>(null)
   const [lastRaw, setLastRaw] = useState<string | null>(null)
   const checkRun = useRef(0)
+  /** Judge Mode: why the review shows the pinned sample values, and how the live extract compared. */
+  const [pin, setPin] = useState<PinInfo | null>(null)
+  const [oneClickMs, setOneClickMs] = useState<number | null>(null)
+  const oneClickStart = useRef<number | null>(null)
+  const [oneClickBusy, setOneClickBusy] = useState(false)
+  const [checkStartedAt, setCheckStartedAt] = useState<number | null>(null)
 
   const [remember, setRemember] = useState(rememberEnabled())
   const [saved, setSaved] = useState<Remembered | null>(loadApproved())
@@ -184,14 +215,23 @@ export default function App() {
     }
   }
 
-  async function doExtract(consent: boolean) {
-    if (!engine) return
+  /**
+   * Runs the extract. Returns the extract placed on the review screen, or null.
+   * Judge Mode + unmodified bundled sample only: a thin live extract is retried
+   * once, and the review is pinned to the canonical sample values (labelled),
+   * so every run scores the same. User documents are never substituted.
+   */
+  async function doExtract(consent: boolean, override?: ExtractOverride): Promise<{ extract: LeaseExtract; sample: boolean } | null> {
+    if (!engine) return null
     setExtractError(null)
     setNotice(null)
-    const batchPages = pages.filter((p) => batch.includes(p.id))
-    if (!leaseText.trim() && batchPages.length === 0) {
+    const text = override ? override.text : leaseText
+    const pageList = override ? override.pages : pages
+    const batchIds = override ? override.batchIds : batch
+    const batchPages = pageList.filter((p) => batchIds.includes(p.id))
+    if (!text.trim() && batchPages.length === 0) {
       setExtractError({ message: 'Paste the lease text or add at least one page photo first.' })
-      return
+      return null
     }
     // User gesture: start (or attach to) the on-device model, never at module load.
     if (avail === 'downloadable' && !preparing) void prepare()
@@ -206,11 +246,29 @@ export default function App() {
     const t0 = performance.now()
     try {
       const images = await Promise.all(batchPages.map((p) => fileToGenerativePart(p.file)))
-      const out = await runExtract(engine, { leaseText, images, cloudConsent: consent })
-      const next = batchMode && extract ? mergeExtracts(extract, out.extract) : out.extract
+      let out = await runExtract(engine, { leaseText: text, images, cloudConsent: consent })
+      const sampleNow = override ? override.sample : batchMode ? extractIsSample && isSampleDoc : isSampleDoc
+      let next = batchMode && extract ? mergeExtracts(extract, out.extract) : out.extract
+      let pinInfo: PinInfo | null = null
+      if (judge && sampleNow && !batchMode) {
+        let retried = false
+        if (isThinExtract(out.extract, { sample: true })) {
+          retried = true
+          try {
+            out = await runExtract(engine, { leaseText: text, images, cloudConsent: consent })
+          } catch {
+            /* fall through to the labelled fallback */
+          }
+        }
+        const m = matchSample(out.extract)
+        pinInfo = { kind: isThinExtract(out.extract, { sample: true }) ? 'fallback' : 'pinned', ...m, retried }
+        next = structuredClone(SAMPLE_EXTRACT)
+      }
       setExtract(next)
+      setPin(pinInfo)
+      setUnsure([])
       setExtractMs(performance.now() - t0)
-      setExtractIsSample(batchMode ? extractIsSample && isSampleDoc : isSampleDoc)
+      setExtractIsSample(sampleNow)
       setOriginalExtract(JSON.stringify(cleanExtract(next)))
       setExtractSource(batchMode && extractSource === 'IN_CLOUD' ? 'IN_CLOUD' : out.source)
       setDonePages((d) => [...d, ...batchPages.map((p) => p.id)])
@@ -220,10 +278,12 @@ export default function App() {
       if (out.source === 'IN_CLOUD' && !consent) {
         setNotice('The SDK reported this extract ran in the cloud even though the on-device model was ready.')
       }
+      return { extract: next, sample: sampleNow }
     } catch (e) {
       if (e instanceof ConsentRequiredError) setShowConsent(true)
       else if (e instanceof ParseError) setExtractError({ message: e.message, raw: e.raw })
       else setExtractError({ message: friendlyError(e) })
+      return null
     } finally {
       setExtracting(false)
     }
@@ -234,21 +294,35 @@ export default function App() {
     setExtractSource('FIXTURE')
     setExtractMs(null)
     setExtractIsSample(false)
+    setOriginalExtract(JSON.stringify(cleanExtract(sampleExtract as LeaseExtract)))
+    setPin(null)
     setUnsure([])
     setStep('review')
   }
 
-  async function runCloudCheck(approved: LeaseExtract, ruleFindings: DisplayFinding[]) {
-    if (!engine) return
+  /** Records the one-click wall-clock time when the verdict becomes final (live or cached). */
+  function finishOneClick() {
+    if (oneClickStart.current != null) {
+      setOneClickMs(performance.now() - oneClickStart.current)
+      oneClickStart.current = null
+    }
+  }
+
+  async function runCloudCheck(approved: LeaseExtract, ruleFindings: DisplayFinding[], ctx: CheckCtx) {
+    if (!engine) {
+      finishOneClick()
+      return
+    }
     const runId = ++checkRun.current
     const current = () => runId === checkRun.current
+    setCheckStartedAt(performance.now())
     setChecking(true)
     setCheckError(null)
     setCached(null)
     setLiveRetry(null)
     setCheckMs(null)
     setLastRaw(null)
-    setCheckPrompt(buildCheckPrompt(approved, playbook, unsure))
+    setCheckPrompt(buildCheckPrompt(approved, ctx.playbook, ctx.unsure))
     const t0 = performance.now()
     const applyLive = (out: CheckOutput) => {
       setFindings(mergeFindings(ruleFindings, out.findings))
@@ -257,10 +331,10 @@ export default function App() {
       setLastRaw(out.raw)
       setCached(null)
     }
-    const live = runCheck(engine, approved, playbook, unsure)
+    const live = runCheck(engine, approved, ctx.playbook, ctx.unsure)
 
     // Cached fallback is allowed ONLY in Judge Mode and ONLY for the bundled sample lease.
-    const useCache = judge && extractIsSample
+    const useCache = judge && ctx.sample
     if (!useCache) {
       try {
         const out = await live
@@ -268,7 +342,10 @@ export default function App() {
       } catch (e) {
         if (current()) setCheckError(e instanceof ParseError ? `${e.message} Retry to ask again.` : friendlyError(e))
       } finally {
-        if (current()) setChecking(false)
+        if (current()) {
+          setChecking(false)
+          finishOneClick()
+        }
       }
       return
     }
@@ -285,20 +362,22 @@ export default function App() {
     if (r.kind === 'ok') {
       applyLive(r.out)
       setChecking(false)
+      finishOneClick()
       return
     }
 
-    const cv = cachedSampleVerdict(playbook, ruleFindings)
-    setFindings(cv.findings)
+    const cv = cachedSampleVerdict(ctx.playbook, approved)
+    setFindings(mergeFindings(ruleFindings, cv.cloudFindings))
     setCheckSource('CACHED')
     setCheckMs(performance.now() - t0)
     setCached({
       reason: r.kind === 'timeout' ? `The live check took longer than ${JUDGE_TIMEOUT_MS / 1000} seconds.` : friendlyError(r.e),
       hasRecordedCloud: cv.hasRecordedCloud,
       recordedAt: cv.recordedAt,
-      edited: originalExtract !== null && JSON.stringify(approved) !== originalExtract,
+      edited: ctx.original !== null && JSON.stringify(approved) !== ctx.original,
     })
     setChecking(false)
+    finishOneClick()
 
     // Keep retrying live in the background; swap in the live result if it arrives.
     const waits = r.kind === 'timeout' ? [0, ...JUDGE_RETRY_DELAYS_MS] : JUDGE_RETRY_DELAYS_MS
@@ -307,7 +386,7 @@ export default function App() {
       if (waits[i]) await sleep(waits[i])
       if (!current()) return
       try {
-        const out = await (i === 0 && r.kind === 'timeout' ? live : runCheck(engine, approved, playbook, unsure))
+        const out = await (i === 0 && r.kind === 'timeout' ? live : runCheck(engine, approved, ctx.playbook, ctx.unsure))
         if (!current()) return
         applyLive(out)
         setLiveRetry({ attempt: i + 1, total: waits.length, active: false, swapped: true })
@@ -330,21 +409,72 @@ export default function App() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
 
-  async function approve() {
-    if (!extract) return
-    const approved = cleanExtract(extract)
-    const ruleFindings = runPlaybook(playbook, approved)
+  async function approve(given?: LeaseExtract, ctx?: CheckCtx) {
+    const source = given ?? extract
+    if (!source) return
+    const approved = cleanExtract(source)
+    const pb = ctx?.playbook ?? playbook
+    const ruleFindings = runPlaybook(pb, approved)
     setFindings(ruleFindings)
     setCheckSource(null)
     setCheckPrompt(null)
     setCheckError(null)
+    setCheckMs(null)
     setCached(null)
     setLiveRetry(null)
     setStep('results')
     window.scrollTo({ top: 0 })
     saveApproved(approved, playbookId, extractSource)
     setSaved(loadApproved())
-    await runCloudCheck(approved, ruleFindings)
+    await runCloudCheck(approved, ruleFindings, ctx ?? { sample: extractIsSample, original: originalExtract, playbook, unsure })
+  }
+
+  /**
+   * Judge Mode one-click demo: load the bundled sample, extract (the click is
+   * the cloud consent when Nano is unavailable), auto-approve only if the
+   * extract is full, run the cloud check and land on the clause map.
+   */
+  async function runSampleOneClick() {
+    if (!engine || oneClickBusy) return
+    setOneClickBusy(true)
+    const t0 = performance.now()
+    oneClickStart.current = t0
+    setOneClickMs(null)
+    checkRun.current++
+    try {
+      const r = await fetch('/fixture-lease.txt')
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      const text = await r.text()
+      pages.forEach((p) => URL.revokeObjectURL(p.url))
+      setSampleText(text)
+      setLeaseText(text)
+      setPages([])
+      setBatch([])
+      setBatchMode(false)
+      setPlaybookId('us-typical')
+      const consent = avail !== 'available'
+      const res = await doExtract(consent, { text, pages: [], batchIds: [], sample: true })
+      if (!res) {
+        oneClickStart.current = null
+        return
+      }
+      if (isThinExtract(res.extract, { sample: res.sample })) {
+        // Never auto-advance a thin extract: stop on review with the warning.
+        oneClickStart.current = null
+        return
+      }
+      await approve(res.extract, {
+        sample: res.sample,
+        original: JSON.stringify(cleanExtract(res.extract)),
+        playbook: getPlaybook('us-typical'),
+        unsure: [],
+      })
+    } catch (e) {
+      oneClickStart.current = null
+      setExtractError({ message: `Could not run the sample (${friendlyError(e)}).` })
+    } finally {
+      setOneClickBusy(false)
+    }
   }
 
   async function loadSample() {
@@ -385,6 +515,9 @@ export default function App() {
 
   function startOver() {
     checkRun.current++
+    oneClickStart.current = null
+    setOneClickMs(null)
+    setPin(null)
     setCached(null)
     setLiveRetry(null)
     setExtractIsSample(false)
@@ -421,9 +554,27 @@ export default function App() {
     setExtractSource(saved.source)
     setExtractIsSample(false)
     setExtractMs(null)
+    setPin(null)
+    setOriginalExtract(JSON.stringify(cleanExtract(saved.extract)))
     setPlaybookId(saved.playbookId)
     setStep('review')
   }
+
+  const pinNote = pin ? (
+    pin.kind === 'pinned' ? (
+      <>
+        <strong>Bundled sample values (Judge Mode).</strong> The live extract ran and matched {pin.matched} of {pin.total} key
+        fields of the bundled sample{pin.differs.length ? ` (differed on ${pin.differs.join(', ')})` : ''}
+        {pin.retried ? ', after one retry' : ''}. So every run scores the same, this review shows the canonical sample values from
+        the bundled fixture.
+      </>
+    ) : (
+      <>
+        <strong>Fallback: bundled sample extract.</strong> The live extract came back incomplete{pin.retried ? ' twice' : ''}, so
+        this review shows the bundled sample extract, not a model result for this run.
+      </>
+    )
+  ) : null
 
   const setupMissing = engine === null ? missingEnv() : []
   const aiReady = !!engine
@@ -446,9 +597,8 @@ export default function App() {
                   <h1 className="font-serif text-4xl leading-[1.08] font-medium tracking-tight sm:text-5xl">
                     See what a lease really costs before you sign.
                   </h1>
-                  <p className="mt-3 max-w-xl text-text-secondary">
-                    Portia maps every fee and obligation in a rental agreement, then flags terms worth questioning against a curated
-                    playbook. The document is read on your device. Only the facts you approve go to the cloud.
+                  <p className="mt-3 max-w-xl text-text-secondary" data-testid="hero-line">
+                    {heroLine(avail)}
                   </p>
                 </div>
                 <ol className="grid gap-2 text-sm" aria-label="How Portia works">
@@ -457,7 +607,10 @@ export default function App() {
                       <IconChip width={15} height={15} />
                     </span>
                     <span>
-                      <strong>Extract on-device.</strong> Gemini Nano builds a JSON fee map.
+                      <strong>Extract on-device.</strong>{' '}
+                      {avail === 'available'
+                        ? 'Gemini Nano builds a JSON fee map.'
+                        : 'With Gemini Nano in desktop Chrome; here, cloud Gemini only with your consent.'}
                     </span>
                   </li>
                   <li className="flex items-center gap-3">
@@ -481,12 +634,21 @@ export default function App() {
             )}
 
             {judge && (
-              <p className="no-print rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm" data-testid="judge-banner">
-                <span className="font-mono text-xs font-medium text-accent-text">JUDGE MODE</span>{' '}
-                Models are pre-warmed on landing and the core loop is timed. For the sample lease only, if the live cloud check
-                fails or takes over {JUDGE_TIMEOUT_MS / 1000} s, a cached sample result is shown and clearly labelled while the live
-                check keeps retrying. <a href="/?judge=0">Turn off</a>
-              </p>
+              <details className="no-print rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-sm" data-testid="judge-banner">
+                <summary className="cursor-pointer">
+                  <span className="font-mono text-xs font-medium text-accent-text">JUDGE MODE</span> pre-warmed, timed, labelled
+                  sample fallback{' '}
+                  <a href="/?judge=0" className="ml-1">
+                    Turn off
+                  </a>
+                </summary>
+                <p className="mt-1.5 pb-1 text-text-secondary">
+                  Models are pre-warmed on landing and the loop is timed. For the bundled sample lease only: the review is pinned to
+                  the canonical sample values (labelled) so every run scores the same, and if the live cloud check fails or takes
+                  over {JUDGE_TIMEOUT_MS / 1000} s, a labelled cached result is shown while the live check keeps retrying. Your own
+                  documents are never substituted.
+                </p>
+              </details>
             )}
 
             <nav aria-label="Progress" className="no-print">
@@ -554,6 +716,19 @@ export default function App() {
                     </p>
                   )}
                   <Intake
+                    oneClick={
+                      judge && engine && !batchMode && !showConsent
+                        ? {
+                            label: avail === 'available' ? 'Run the sample lease' : 'Send the sample to cloud Gemini and check',
+                            hint:
+                              avail === 'available'
+                                ? 'One click: loads the bundled sample lease, extracts it on this device with Gemini Nano, and checks the approved JSON in the cloud.'
+                                : 'Gemini Nano is not available here, so this click is your consent to send the bundled sample lease (not your data) to cloud Gemini via Firebase AI Logic, then check it.',
+                            busy: oneClickBusy || extracting,
+                            onRun: runSampleOneClick,
+                          }
+                        : undefined
+                    }
                     leaseText={leaseText}
                     onLeaseText={setLeaseText}
                     pages={pages}
@@ -606,10 +781,11 @@ export default function App() {
                       {notice}
                     </p>
                   )}
+                  {!showConsent && (
                   <div className="no-print flex flex-wrap items-center gap-3">
                     <button
                       type="button"
-                      className="btn btn-primary px-5"
+                      className={`btn px-5 ${judge ? '' : 'btn-primary'}`}
                       onClick={() => doExtract(cloudConsent)}
                       disabled={!aiReady || extracting}
                       data-testid="extract"
@@ -631,6 +807,7 @@ export default function App() {
                     )}
                     {!aiReady && engine === null && <span className="hint">Extraction needs Firebase configuration.</span>}
                   </div>
+                  )}
                 </div>
                 <aside className="space-y-4">
                   <DeviceStatus
@@ -664,10 +841,14 @@ export default function App() {
                 playbookId={playbookId}
                 cloudReviewAvailable={aiReady}
                 busy={checking}
-                onApprove={approve}
+                onApprove={() => void approve()}
                 onBack={() => setStep('intake')}
                 onAddBatch={addBatch}
-                canAddBatch={aiReady}
+                canAddBatch={aiReady && !pin}
+                thin={isThinExtract(extract, { sample: judge && extractIsSample })}
+                editedByHand={originalExtract !== null && JSON.stringify(cleanExtract(extract)) !== originalExtract}
+                nanoMissing={avail !== 'available'}
+                pinNote={pinNote}
               />
             )}
             {step === 'review' && notice && (
@@ -688,7 +869,12 @@ export default function App() {
                 checking={checking}
                 onRetryCheck={() => {
                   const approved = cleanExtract(extract)
-                  void runCloudCheck(approved, runPlaybook(playbook, approved))
+                  void runCloudCheck(approved, runPlaybook(playbook, approved), {
+                    sample: extractIsSample,
+                    original: originalExtract,
+                    playbook,
+                    unsure,
+                  })
                 }}
                 onEdit={() => {
                   checkRun.current++
@@ -697,7 +883,16 @@ export default function App() {
                 cached={cached}
                 cachedLabel={CACHED_LABEL}
                 liveRetry={liveRetry}
-                timing={{ extractMs, checkMs }}
+                timing={{ extractMs, checkMs, oneClickMs }}
+                checkStartedAt={checkStartedAt}
+                nanoMissing={avail !== 'available'}
+                pinnedNote={
+                  pin
+                    ? pin.kind === 'pinned'
+                      ? 'Judge Mode: extract values are pinned to the bundled sample so every run scores the same.'
+                      : 'Fallback: the live extract was incomplete, so these results use the bundled sample extract.'
+                    : null
+                }
                 onDownloadFixture={
                   judge && record && checkSource === 'IN_CLOUD' && extractIsSample && lastRaw ? downloadVerdictFixture : undefined
                 }

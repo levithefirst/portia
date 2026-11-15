@@ -1,22 +1,26 @@
 import type { SourceLabel, Status } from '../lib/types'
 import { IconAmber, IconChip, IconCloud, IconGreen, IconRed } from './icons'
 
-const SOURCE_TEXT: Record<SourceLabel, string> = {
-  ON_DEVICE: 'ON_DEVICE',
-  IN_CLOUD: 'IN_CLOUD',
-  FIXTURE: 'SAMPLE DATA',
-  CACHED: 'CACHED SAMPLE',
+const RAW: Record<SourceLabel, string> = {
+  ON_DEVICE: 'on_device',
+  IN_CLOUD: 'in_cloud',
+  FIXTURE: 'none (bundled sample data, no model call)',
+  CACHED: 'none (bundled cached sample verdict)',
 }
 
-const SOURCE_HELP: Record<SourceLabel, string> = {
-  ON_DEVICE: 'Ran on this device with Gemini Nano (result.response.inferenceSource)',
-  IN_CLOUD: 'Ran in the cloud with Gemini via Firebase AI Logic (result.response.inferenceSource)',
-  FIXTURE: 'Pre-recorded sample, no model was called',
-  CACHED: 'Bundled verdict for the sample lease, shown because the live cloud check was unavailable',
+/** Plain-language label. The raw SDK value is kept in the title tooltip. */
+export function sourceText(source: SourceLabel, step: 'Extract' | 'Check', nanoMissing = false): string {
+  if (source === 'ON_DEVICE') return step === 'Extract' ? 'Extracted on this device (Gemini Nano)' : 'Checked on this device'
+  if (source === 'IN_CLOUD') {
+    if (step === 'Check') return 'Checked in the cloud'
+    return nanoMissing ? 'Extracted in the cloud. Gemini Nano is not on this device' : 'Extracted in the cloud'
+  }
+  if (source === 'CACHED') return 'Cached sample result'
+  return 'Sample data, no model call'
 }
 
 /** Visible inferenceSource badge shown after every model call. */
-export function SourceBadge({ source, step }: { source: SourceLabel; step: string }) {
+export function SourceBadge({ source, step, nanoMissing = false }: { source: SourceLabel; step: 'Extract' | 'Check'; nanoMissing?: boolean }) {
   const cls =
     source === 'ON_DEVICE'
       ? 'bg-accent text-on-accent border-accent'
@@ -25,13 +29,13 @@ export function SourceBadge({ source, step }: { source: SourceLabel; step: strin
         : 'bg-transparent text-text-secondary border-border border-dashed'
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[0.72rem] font-medium tracking-wide ${cls}`}
-      title={SOURCE_HELP[source]}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.75rem] font-medium ${cls}`}
+      title={`${step} inferenceSource: ${RAW[source]}`}
       data-testid={`badge-${step}`}
+      data-source={source}
     >
       {source === 'ON_DEVICE' ? <IconChip width={13} height={13} /> : source === 'IN_CLOUD' ? <IconCloud width={13} height={13} /> : null}
-      <span className="sr-only">{step} inference source: </span>
-      {step}: {SOURCE_TEXT[source]}
+      {sourceText(source, step, nanoMissing)}
     </span>
   )
 }

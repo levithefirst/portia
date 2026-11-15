@@ -5,7 +5,16 @@ import { MAX_QUEUED_PAGES, sortFiles } from '../lib/intake'
 import type { PageImage } from '../lib/types'
 import { IconArrowDown, IconArrowUp, IconUpload, IconX } from './icons'
 
+interface OneClick {
+  label: string
+  hint: string
+  busy: boolean
+  onRun: () => void
+}
+
 interface Props {
+  /** Judge Mode one-click demo on the bundled sample. */
+  oneClick?: OneClick
   leaseText: string
   onLeaseText: (t: string) => void
   pages: PageImage[]
@@ -75,6 +84,16 @@ export function Intake(p: Props) {
 
   return (
     <section aria-labelledby="intake-title" className="paper p-5 sm:p-6">
+      {p.oneClick && (
+        <div className="mb-6 rounded-xl border border-accent bg-bg p-4" data-testid="one-click">
+          <p className="eyebrow">Judge Mode · one click</p>
+          <button type="button" className="btn btn-primary mt-2 w-full px-5 py-3 text-base sm:w-auto" onClick={p.oneClick.onRun} disabled={p.oneClick.busy} data-testid="run-sample">
+            {p.oneClick.busy ? 'Running the sample…' : p.oneClick.label}
+          </button>
+          <p className="hint mt-2 max-w-2xl">{p.oneClick.hint}</p>
+          <p className="hint mt-1">Or use the manual path below with your own lease.</p>
+        </div>
+      )}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">Step 1</p>

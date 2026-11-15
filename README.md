@@ -4,7 +4,7 @@
 
 Built for #BuildHybridAI 2026 with **Firebase AI Logic hybrid inference** (Web / Chrome). Not legal advice.
 
-- App: `https://askportia.vercel.app` (set after deploy, see `docs/HANDOFF-PORTIA.md`)
+- App: https://askportia.vercel.app (judges: https://askportia.vercel.app/?judge=1)
 - License: Apache-2.0
 
 ## Why
@@ -64,12 +64,16 @@ Under `PREFER_ON_DEVICE`, the SDK sends a request to the cloud whenever the on-d
 
 ## Judge Mode (`?judge=1`)
 
-A reliability mode for evaluators, enabled per browser session with `?judge=1` (`?judge=0` turns it off). A banner says when it is on.
+A reliability mode for evaluators, enabled per browser session with `?judge=1` (`?judge=0` turns it off). A one-line bar says when it is on.
 
-- **Pre-warm on landing:** without waiting for a tap and without blocking the page (`requestIdleCallback`), Portia checks Gemini Nano availability and initialises Firebase, App Check and both AI Logic model instances. `initializeDeviceModel()` is called during pre-warm only if Nano is already downloaded; a download still needs a click, as Chrome requires.
-- **Timing:** the result card shows the core loop time, for example `Verdict in 4.2s, on-device + cloud (extract 1.2s + check 3.0s)`. Review time is excluded.
-- **Cached sample verdict:** for the **unmodified sample lease only** (sample text and/or sample photos, unchanged), if the live cloud check errors, is rate limited (429) or takes more than 8 seconds, Portia shows the bundled verdict labelled **"Cached sample result (live check unavailable)"** with a `Check: CACHED SAMPLE` badge, keeps retrying live in the background (4 more attempts with backoff), and swaps in the live result if it arrives. Any other document gets the normal error and retry, never a cached result.
-- The bundled verdict lives in `src/fixtures/sample-verdict.json` and is recorded from one real cloud run with `?judge=1&record=1` (see `docs/HANDOFF-PORTIA.md` item 7b). Until it is recorded, the file is a placeholder (`"recorded": false`) and the cached fallback shows only the in-browser playbook rule results, and says so.
+- **One click:** a single primary button, "Run the sample lease", loads the bundled sample, extracts it, auto-approves only if the extract is full, runs the cloud check and lands on the clause map. On a browser without Gemini Nano the button reads "Send the sample to cloud Gemini and check" and the click is the consent.
+- **Pre-warm on landing:** without waiting for a tap and without blocking the page, Portia checks Nano availability and initialises Firebase, App Check and both AI Logic model instances. `initializeDeviceModel()` runs during pre-warm only if Nano is already downloaded.
+- **Stable sample results:** for the unmodified bundled sample only, a thin live extract is retried once, and the review is pinned to the canonical values in `src/fixtures/sample-extract.json` with a visible label (or a labelled fallback if the live extract stays thin). The tiles count the deterministic in-browser playbook rules, so every run shows 3 red / 6 amber / 0 green; the cloud review appears as commentary on each card.
+- **Timing:** while the cloud review runs, the tiles are labelled "Preliminary: playbook rules in your browser" with a live timer. When it finishes, the card shows e.g. `Verdict in 4.2s, cloud + cloud (extract 1.2s + check 3.0s), one click`.
+- **Cached sample verdict:** for the unmodified bundled sample only, if the live check errors, is rate limited or takes more than 8 seconds, Portia shows the recorded verdict labelled **"Cached sample result (live check unavailable)"**, keeps retrying live in the background and swaps in the live result if it arrives. The recorded verdict (`src/fixtures/sample-verdict.json`) came from a live `in_cloud` run on 2026-11-14.
+- **Never on your documents:** pasted leases, photos, or an edited sample get the normal flow, errors and retries. No fixture values are ever substituted for them.
+
+Everywhere (not only Judge Mode): **Approve & check** is disabled when an extract is below the fullness bar (rent plus at least 5 of 8 core money fields) with the message "This extract is missing too many fields to check. Fill them in, or go back and extract again." Editing fields by hand unlocks it.
 
 ## Run on-device in Chrome
 
@@ -119,7 +123,7 @@ npm test              # unit tests (vitest): privacy gate, payload contents, par
 npm run test:smoke    # builds twice and drives Chromium with Playwright + axe-core
 ```
 
-The smoke test needs no keys and no Nano. Part A uses the production build without env vars (setup state, sample extract, rules, PDF rejection, print list, privacy route, dark mode, axe). Part B uses a `--mode e2e` build with a fake engine that behaves like a phone without Nano: it asserts no model call happens before consent, the badges, and that the check request carries the edited JSON and no lease text or images. Part C is the Judge Mode 10-second loop: with the cloud check mocked to succeed, to fail with a 429, and to be slow (9 s), the sample loop must reach a verdict within 10 s, the cached label must appear on failure, the live result must be swapped in when it arrives, pre-warm must run before any tap, and a modified document must never get a cached result. The fake engine (`?fakeCheck=fail|slow`) is compiled in only for `--mode e2e`.
+The smoke test needs no keys and no Nano. Part A uses the production build without env vars (setup state, sample extract, rules, PDF rejection, print list, privacy route, dark mode, axe). Part B uses a `--mode e2e` build with a fake engine that behaves like a phone without Nano: it asserts no model call happens before consent, the badges, and that the check request carries the edited JSON and no lease text or images. Part C is the Judge Mode suite: from `/?judge=1`, one click reaches a full-evidence verdict in under 10 s with the cloud check mocked OK, failing (429) and slow; five runs with drifting live extracts give identical counts; a thin sample extract is retried then shown as a labelled fallback; Approve is disabled on a thin extract; no Extract button is clickable under the consent banner; and the 412 px results fold and 1280x800 review fold are checked. The fake engine (`?fakeCheck=fail|slow`, `?fakeExtract=thin|thinonce|wild`) is compiled in only for `--mode e2e`.
 
 To exercise the real cloud path locally, put real values in `.env`, run `npm run dev`, register the debug token, and use the app.
 

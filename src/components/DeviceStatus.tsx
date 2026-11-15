@@ -34,6 +34,14 @@ const COPY: Record<DeviceAvailability | 'checking', { title: string; body: strin
   },
 }
 
+/** Hero sub-line. Only claims on-device reading when Gemini Nano is actually ready. */
+export function heroLine(availability: DeviceAvailability | 'checking'): string {
+  const lead = 'Portia maps every fee and obligation in a rental agreement, then flags terms worth questioning against a curated playbook.'
+  if (availability === 'available') return `${lead} The document is read on your device. Only the facts you approve go to the cloud.`
+  if (availability === 'checking') return lead
+  return 'Gemini Nano is not available on this device, so extraction needs your consent to use cloud Gemini. When Nano is available in desktop Chrome, the document is read on your device and only the facts you approve go to the cloud.'
+}
+
 export function DeviceStatus({ availability, progress, preparing, error, onPrepare, aiReady }: Props) {
   const c = COPY[availability]
   const onDevice = availability === 'available'
