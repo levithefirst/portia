@@ -92,23 +92,25 @@ function Hero({ money }: { money: (v: number) => string }) {
   const steps = FEES.reduce<number[]>((a, f) => [...a, (a[a.length - 1] ?? 0) + f.amount], [])
   const v = useCountTo(steps, 1500, 520)
   return (
-    <section className="lp-hero relative grid items-center gap-12 pt-10 pb-20 lg:min-h-[calc(100vh-57px)] lg:grid-cols-12 lg:gap-8 lg:pt-6 lg:pb-12" aria-labelledby="landing-title">
+    <section className="lp-hero relative pt-8 pb-20 lg:min-h-[calc(100vh-57px)] lg:pt-6 lg:pb-12" aria-labelledby="landing-title">
       <div className="lp-light" aria-hidden="true" />
-      <div className="relative lg:col-span-6">
+      <div className="lp-head relative">
         <div className="flex items-center gap-3">
           <LogoMark size={44} />
           <span className="eyebrow">Lease fee and obligation checker</span>
         </div>
-        <h1 id="landing-title" className="lp-display mt-8">
+        <h1 id="landing-title" className="lp-display mt-6 lg:mt-8">
           <span className="reveal-line"><span>Every fee.</span></span>{' '}
           <span className="reveal-line"><span>Every clause.</span></span>{' '}
           <span className="reveal-line"><span><em>Before</em> you sign.</span></span>
         </h1>
-        <p className="lp-rise mt-7 max-w-[46ch] text-[1.1rem] leading-relaxed text-text-secondary">
-          Portia reads a rental agreement, finds the true monthly cost and flags terms worth questioning. On your device when it
-          can. In the cloud only when you say so.
-        </p>
-        <div className="lp-rise mt-9 flex flex-wrap items-center gap-3" style={{ animationDelay: '120ms' }}>
+      </div>
+      <p className="lp-copy lp-rise relative max-w-[46ch] text-[1.1rem] leading-relaxed text-text-secondary">
+        Portia reads a rental agreement, finds the true monthly cost and flags terms worth questioning. On your device when it
+        can. In the cloud only when you say so.
+      </p>
+      <div className="lp-ctas relative">
+        <div className="lp-rise flex flex-wrap items-center gap-3" style={{ animationDelay: '120ms' }}>
           <AppLink className="btn btn-primary btn-lg lp-cta" testId="cta-check">
             Check a lease <span aria-hidden="true" className="lp-arrow">→</span>
           </AppLink>
@@ -116,10 +118,10 @@ function Hero({ money }: { money: (v: number) => string }) {
             See a sample verdict
           </a>
         </div>
-        <p className="mt-6 font-mono text-[0.72rem] text-text-secondary">No account · pasted text or page photos · not legal advice</p>
+        <p className="mt-5 hidden font-mono text-[0.72rem] text-text-secondary sm:block">No account · pasted text or page photos · not legal advice</p>
       </div>
 
-      <div className="relative lg:col-span-6">
+      <div className="lp-scan relative">
         <figure className="scan-stage relative m-0" aria-label="Animation: Portia scans the sample lease, highlights clauses and adds up the true monthly cost">
           <div className="scan-doc paper relative overflow-hidden">
             <div className="scan-beam" aria-hidden="true" />
@@ -127,21 +129,21 @@ function Hero({ money }: { money: (v: number) => string }) {
               <p className="font-serif text-[1rem] font-medium">Residential Lease Agreement</p>
               <p className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-secondary">Sample lease · p.1</p>
             </div>
-            <div className="space-y-3 px-6 pt-4 pb-6 font-serif text-[0.88rem] leading-[1.55] sm:text-[0.92rem]">
+            <div className="space-y-3 px-5 pt-4 pb-16 font-serif text-[0.86rem] sm:px-6 sm:pb-6 leading-[1.55] sm:text-[0.92rem]">
               <p><span className="clause-no">1.</span> Tenant shall pay monthly rent of <mark className="hl hl-ink" style={{ ['--d' as string]: '0.35s' }}>$1,850.00</mark>, due on the 1st day of each month.</p>
-              <p><span className="clause-no">2.</span> Upon signing, Tenant shall pay a security deposit of <mark className="hl hl-red" style={{ ['--d' as string]: '0.6s' }}>$4,625.00 (two and one-half months of rent)</mark>.</p>
+              <p className="hidden sm:block"><span className="clause-no">2.</span> Upon signing, Tenant shall pay a security deposit of <mark className="hl hl-red" style={{ ['--d' as string]: '0.6s' }}>$4,625.00 (two and one-half months of rent)</mark>.</p>
               <p><span className="clause-no">3.</span> Rent not received by 11:59 p.m. on the 1st is late. <mark className="hl hl-red" style={{ ['--d' as string]: '0.9s' }}>Tenant shall pay an initial late charge of $150.00</mark>.</p>
               <p><span className="clause-no">4.</span> The following services are <mark className="hl hl-red" style={{ ['--d' as string]: '1.2s' }}>mandatory for all residents</mark>: Technology Package $45.00, Community Amenity Fee $35.00, Valet Trash $25.00, Utility Billing Administration $6.95 per month.</p>
               <p className="hidden sm:block"><span className="clause-no">6.</span> This Lease shall <mark className="hl hl-amber" style={{ ['--d' as string]: '1.5s' }}>automatically renew</mark> unless Tenant gives notice at least ninety (90) days before the end of the term.</p>
               <p className="hidden sm:block"><span className="clause-no">7.</span> Tenant shall pay an <mark className="hl hl-amber" style={{ ['--d' as string]: '1.75s' }}>early termination fee equal to three (3) months of rent</mark>.</p>
             </div>
           </div>
-          <div className="scan-receipt relative mt-[-3.5rem] ml-auto w-[min(100%,20rem)] rounded-2xl p-5 lg:absolute lg:right-[-0.5rem] lg:bottom-[-4.5rem] lg:mt-0">
+          <div className="scan-receipt relative mt-[-3.5rem] ml-auto w-[min(92%,20rem)] rounded-2xl p-4 sm:p-5 lg:absolute lg:right-[-0.5rem] lg:bottom-[-4.5rem] lg:mt-0">
             <p className="muted font-mono text-[0.62rem] uppercase tracking-[0.1em]">True monthly cost · sample lease</p>
-            <p className="cost-figure mt-2 text-[2.9rem]" data-testid="hero-total" aria-label={`${money(steps[steps.length - 1])} a month`}>
+            <p className="cost-figure mt-2 text-[2.3rem] sm:text-[2.9rem]" data-testid="hero-total" aria-label={`${money(steps[steps.length - 1])} a month`}>
               {money(v)}
             </p>
-            <ul className="mt-3 space-y-1 font-mono text-[0.7rem]">
+            <ul className="mt-3 hidden space-y-1 font-mono text-[0.7rem] sm:block">
               {FEES.map((f, i) => (
                 <li key={f.label} className="receipt-line flex justify-between gap-3" style={{ ['--d' as string]: `${1.5 + i * 0.52}s` }}>
                   <span className="muted">{i === 0 ? '' : '+ '}{f.label}</span>
@@ -244,23 +246,25 @@ function Story({ n, title, icon, children }: { n: string; title: string; icon: R
 /* ---------- Hybrid AI: flow diagram ---------- */
 function Hybrid({ avail }: { avail: DeviceAvailability | 'checking' }) {
   return (
-    <section id="hybrid" className="border-t border-border-subtle py-24 sm:py-36" aria-labelledby="hybrid-title">
+    <section id="hybrid" className="py-20 sm:py-32" aria-labelledby="hybrid-title">
       <p className="eyebrow">Hybrid AI · Firebase AI Logic</p>
       <h2 id="hybrid-title" className="lp-h2 mt-4 max-w-[20ch]">On your device first. The cloud only with consent.</h2>
-      <div className="flow mt-14" role="img" aria-label="Flow: the lease is read by Gemini Nano on your device; if Nano is not available, Portia asks before using cloud Gemini; only the approved JSON goes to the cloud check.">
-        <FlowNode k="Your lease" t="Text or page photos" />
-        <FlowEdge />
-        <div className="flex flex-col gap-3">
-          <FlowNode k="ON_DEVICE" t="Gemini Nano in Chrome" accent />
-          <div className="flow-alt">
-            <span className="font-mono text-[0.65rem] text-text-secondary">No Nano? Portia asks first</span>
-            <FlowNode k="IN_CLOUD" t="Cloud Gemini, with consent" dashed />
+      <div className="flow-wrap mt-14 rounded-3xl border border-border-subtle p-5 sm:p-8">
+        <div className="flow" role="img" aria-label="Flow: the lease is read by Gemini Nano on your device; if Nano is not available, Portia asks before using cloud Gemini; only the approved JSON goes to the cloud check.">
+          <FlowNode k="01 · Input" t="Your lease" d="Text or page photos, in your browser" icon={<IconLock width={16} height={16} />} />
+          <FlowEdge />
+          <div className="flex flex-col gap-3">
+            <FlowNode k="02 · ON_DEVICE" t="Gemini Nano" d="Chrome's built-in model reads the lease" icon={<IconChip width={16} height={16} />} accent />
+            <div className="flow-alt">
+              <span className="font-mono text-[0.65rem] text-text-secondary">No Nano? Portia stops and asks</span>
+              <FlowNode k="IN_CLOUD · with consent" t="Cloud Gemini" d="Only for this document, only after you agree" icon={<IconCloud width={16} height={16} />} dashed />
+            </div>
           </div>
+          <FlowEdge />
+          <FlowNode k="03 · You approve" t="Structured JSON" d="Edit any field before anything is checked" icon={<IconLock width={16} height={16} />} />
+          <FlowEdge />
+          <FlowNode k="04 · IN_CLOUD" t="Playbook check" d="Approved JSON only, never the lease" icon={<IconCloud width={16} height={16} />} />
         </div>
-        <FlowEdge />
-        <FlowNode k="You approve" t="Structured JSON only" />
-        <FlowEdge />
-        <FlowNode k="IN_CLOUD" t="Check against the playbook" />
       </div>
       <p className="mt-12 flex max-w-3xl items-start gap-3 rounded-xl border border-border-subtle bg-surface px-4 py-3 text-sm" data-testid="landing-device">
         <span className="eyebrow mt-0.5 shrink-0">This device</span>
@@ -269,16 +273,21 @@ function Hybrid({ avail }: { avail: DeviceAvailability | 'checking' }) {
     </section>
   )
 }
-function FlowNode({ k, t, accent, dashed }: { k: string; t: string; accent?: boolean; dashed?: boolean }) {
+function FlowNode({ k, t, d, icon, accent, dashed }: { k: string; t: string; d: string; icon: ReactNode; accent?: boolean; dashed?: boolean }) {
   return (
-    <div className={`flow-node rounded-xl border p-4 ${accent ? 'border-accent bg-accent text-on-accent' : dashed ? 'border-dashed border-border bg-bg' : 'border-border-subtle bg-surface'}`}>
-      <p className={`font-mono text-[0.68rem] tracking-[0.06em] ${accent ? '' : 'text-text-secondary'}`}>{k}</p>
-      <p className="mt-1 font-serif text-[1.1rem] leading-snug font-medium">{t}</p>
+    <div className={`flow-node relative rounded-2xl border p-4 sm:p-5 ${accent ? 'flow-accent border-accent bg-accent text-on-accent' : dashed ? 'border-dashed border-border bg-bg' : 'border-border-subtle bg-bg'}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${accent ? 'bg-on-accent/15' : 'border border-border-subtle bg-surface'}`}>{icon}</span>
+        {accent && <span className="flow-live" aria-hidden="true" />}
+      </div>
+      <p className={`mt-4 font-mono text-[0.64rem] tracking-[0.06em] ${accent ? '' : 'text-text-secondary'}`}>{k}</p>
+      <p className="mt-1 font-serif text-[1.25rem] leading-snug font-medium tracking-tight">{t}</p>
+      <p className={`mt-1 text-[0.8rem] leading-snug ${accent ? '' : 'text-text-secondary'}`}>{d}</p>
     </div>
   )
 }
 function FlowEdge() {
-  return <div className="flow-edge" aria-hidden="true"><span /></div>
+  return <div className="flow-edge" aria-hidden="true"><span /><i /></div>
 }
 
 /* ---------- Privacy: Vercel-style grid with crosshairs ---------- */
@@ -292,7 +301,7 @@ function PrivacyGrid() {
     ['No analytics, no ads', 'Requests to Firebase AI Logic are protected by App Check.'],
   ]
   return (
-    <section id="privacy" className="border-t border-border-subtle py-24 sm:py-36" aria-labelledby="privacy-title">
+    <section id="privacy" className="py-20 sm:py-32" aria-labelledby="privacy-title">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="eyebrow">Privacy and consent</p>
@@ -316,7 +325,7 @@ function PrivacyGrid() {
 type S = { pb: { id: string }; rules: { key: string; status: Status; title: string }[]; rent: number; fees: number; red: number; amber: number; green: number }
 function Sample({ s, money }: { s: S; money: (v: number) => string }) {
   return (
-    <section id="sample" className="border-t border-border-subtle py-24 sm:py-36" aria-labelledby="sample-title">
+    <section id="sample" className="py-20 sm:py-32" aria-labelledby="sample-title">
       <div className="grid gap-10 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <p className="eyebrow">Sample verdict</p>
@@ -373,7 +382,7 @@ function Faq() {
     ['What do red, amber and green mean?', 'Red means "likely worth pushing back on before signing", amber means "ask about this", green means "looks typical". Counts come from the playbook rules, not from the model.'],
   ]
   return (
-    <section id="faq" className="border-t border-border-subtle py-24 sm:py-36" aria-labelledby="faq-title">
+    <section id="faq" className="py-20 sm:py-32" aria-labelledby="faq-title">
       <div className="grid gap-10 lg:grid-cols-12">
         <div className="lg:col-span-4">
           <p className="eyebrow">FAQ</p>

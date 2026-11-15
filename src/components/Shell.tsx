@@ -131,9 +131,9 @@ export function Header({ route }: { route: Route }) {
   )
 }
 
-export function Footer({ children }: { children?: ReactNode }) {
+export function Footer({ children, flush = false }: { children?: ReactNode; flush?: boolean }) {
   return (
-    <footer className="mt-16 border-t border-border-subtle">
+    <footer className={flush ? '' : 'mt-16 border-t border-border-subtle'}>
       <div className="mx-auto max-w-6xl px-4 py-8 text-sm text-text-secondary sm:px-6">
         <div className="mb-4">
           <Wordmark size={22} />

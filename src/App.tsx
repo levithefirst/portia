@@ -884,7 +884,7 @@ export default function App() {
           </div>
         )}
       </main>
-      <Footer>
+      <Footer flush={route === 'home'}>
         {route === 'check' && (
         <label className="inline-flex items-center gap-2 text-text">
           <input
