@@ -54,14 +54,29 @@ function ThemeToggle() {
   )
 }
 
-export function Wordmark() {
+/** The Portia mark: a solid #247D97 disc with one wedge cut from the top. Colour is locked in both themes. */
+export function LogoMark({ size = 26, title }: { size?: number; title?: string }) {
   return (
-    <span className="flex items-center gap-2">
-      <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
-        <rect width="64" height="64" rx="14" fill="var(--accent)" />
-        <path d="M22 48V16h12.5c6.6 0 11 4 11 10s-4.4 10-11 10H29v12z" fill="none" stroke="var(--on-accent)" strokeWidth="5" strokeLinejoin="round" />
-      </svg>
-      <span className="font-serif text-[1.6rem] leading-none font-medium tracking-tight text-text">Portia</span>
+    <svg
+      width={Math.max(16, size)}
+      height={Math.max(16, size)}
+      viewBox="0 0 64 64"
+      role={title ? 'img' : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
+      className="logo-mark shrink-0"
+    >
+      <path d="M32 45.5L29.43 2.11A30 30 0 1 0 34.57 2.11Z" fill="#247D97" />
+    </svg>
+  )
+}
+
+export function Wordmark({ size = 26 }: { size?: number }) {
+  // Clear space: gap >= 25% of the mark width.
+  return (
+    <span className="flex items-center" style={{ gap: Math.ceil(size * 0.3) }}>
+      <LogoMark size={size} />
+      <span className="font-serif text-[1.6rem] leading-none font-medium tracking-[-0.01em] text-text">Portia</span>
     </span>
   )
 }
@@ -99,6 +114,9 @@ export function Footer({ children }: { children?: ReactNode }) {
   return (
     <footer className="mt-16 border-t border-border-subtle">
       <div className="mx-auto max-w-6xl px-4 py-8 text-sm text-text-secondary sm:px-6">
+        <div className="mb-4">
+          <Wordmark size={22} />
+        </div>
         <p className="text-text">
           <strong>Not legal advice.</strong> Portia flags patterns from a curated, static playbook. It does not know the law
           where you live and cannot tell you whether a term is enforceable. Check with a local tenant union, legal aid

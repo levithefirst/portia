@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { IconChip, IconCloud, IconLock } from './icons'
+import { LogoMark } from './Shell'
 
 /**
  * Landing hero. The copy is unchanged from the original (honest no-Nano line
@@ -10,7 +11,7 @@ export function Hero({ line, onDevice, run }: { line: string; onDevice: boolean;
     <section className="hero grid gap-8 lg:grid-cols-12 lg:gap-10" aria-labelledby="hero-title">
       <div className="lg:col-span-7">
         <p className="eyebrow flex items-center gap-2">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+          <LogoMark size={16} />
           Lease fee and obligation map
         </p>
         <h1 id="hero-title" className="display mt-4">
@@ -88,10 +89,10 @@ function LeaseSpecimen() {
         </div>
         <div className="specimen-fade pointer-events-none absolute inset-x-0 bottom-0 h-14" aria-hidden="true" />
       </div>
-      <div className="specimen-tag paper relative -mt-12 -ml-6 w-[17rem] p-4">
+      <div className="specimen-tag paper relative -mt-12 -ml-6 w-[19rem] p-4">
         <p className="eyebrow muted">True monthly cost, sample</p>
         <p className="mt-1 font-serif text-[2rem] leading-none font-medium tracking-tight">$1,961.95</p>
-        <p className="muted mt-1.5 font-mono text-[0.7rem]">$1,850.00 rent + $111.95 required fees</p>
+        <p className="muted mt-1.5 whitespace-nowrap font-mono text-[0.7rem]">$1,850.00 rent + $111.95 required fees</p>
       </div>
       <figcaption className="sr-only">
         Clauses 2, 3 and 4 of the sample lease are flagged red, clause 6 amber. Required fees raise the monthly cost from $1,850.00 to

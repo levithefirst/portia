@@ -5,6 +5,7 @@ import { formatMoney, monthlyRent, sortFindings, totalMonthlyFees } from '../lib
 import type { DisplayFinding, LeaseExtract, SourceLabel, Status } from '../lib/types'
 import { SourceBadge, StatusPill, statusLabel } from './Badges'
 import { IconCopy, IconPrint } from './icons'
+import { LogoMark } from './Shell'
 import { verdictTimeText } from '../lib/judge'
 
 export interface CachedInfo {
@@ -329,6 +330,9 @@ export function Results(p: Props) {
           <p className="hint mt-2">No red or amber findings, so no questions yet.</p>
         )}
         <p className="print-only mt-4 text-xs">
+          <span className="mr-2 inline-block align-middle">
+            <LogoMark size={16} />
+          </span>
           Prepared with Portia. Not legal advice. Playbook {p.playbook.id} v{p.playbook.version}.
         </p>
       </div>
