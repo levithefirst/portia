@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import type { AiEngine } from '../lib/engine'
-import { CLOUD_MODEL } from '../lib/firebase'
+import { getConfig } from '../lib/config'
 import type { DeviceAvailability } from '../lib/onDevice'
 import { getPlaybook } from '../lib/playbooks'
 import { cleanExtract, runCheck, runExtract } from '../lib/pipeline'
@@ -188,7 +188,7 @@ function Runner({ engine, avail }: { engine: AiEngine | null | undefined; avail:
       userAgent: navigator.userAgent,
       machineNote: note,
       availability: avail,
-      model: { cloud: CLOUD_MODEL, onDevice: 'Gemini Nano (Chrome built-in, via Firebase AI Logic)' },
+      model: { cloud: getConfig().cloudModel, onDevice: 'Gemini Nano (Chrome built-in, via Firebase AI Logic)' },
       split,
       cloudCheck: withCheck && consent,
       runs: rows,

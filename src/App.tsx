@@ -34,14 +34,15 @@ import {
   isJudgeMode,
   isRecordMode,
   JUDGE_RETRY_DELAYS_MS,
-  JUDGE_TIMEOUT_MS,
   isThinExtract,
   matchSample,
   SAMPLE_EXTRACT,
   sleep,
   verdictFixture,
 } from './lib/judge'
-import { CLOUD_MODEL } from './lib/firebase'
+import { loadRemoteConfig } from './lib/firebase'
+import { getConfig, playbookOutdated, useConfig } from './lib/config'
+import { PLAYBOOKS } from './lib/playbooks'
 import { runPlaybook } from './lib/rules'
 import {
   forgetApproved,
@@ -159,6 +160,7 @@ export default function App() {
   const [oneClickBusy, setOneClickBusy] = useState(false)
   const [checkStartedAt, setCheckStartedAt] = useState<number | null>(null)
   const online = useOnline()
+  const cfg = useConfig()
   const [receipt, setReceipt] = useState<ReceiptStep[]>([])
   const [receiptLease, setReceiptLease] = useState('')
   const setCheckRow = (row: ReceiptStep) => setReceipt((r) => [...r.filter((s) => s.step !== 'check'), row])
@@ -182,6 +184,17 @@ export default function App() {
   useEffect(() => {
     if (engine !== undefined) void refreshAvailability()
   }, [engine, refreshAvailability])
+
+  // Remote Config in the background on tool routes only. Never awaited; defaults apply until it resolves.
+  const rcStarted = useRef(false)
+  useEffect(() => {
+    if (rcStarted.current || engine?.kind !== 'firebase' || (route !== 'check' && route !== 'eval')) return
+    rcStarted.current = true
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }
+    const run = () => void loadRemoteConfig()
+    if (w.requestIdleCallback) w.requestIdleCallback(run, { timeout: 2000 })
+    else setTimeout(run, 0)
+  }, [engine, route])
 
   // Judge Mode pre-warm: on landing, without blocking the page or waiting for a tap.
   useEffect(() => {
@@ -269,7 +282,7 @@ export default function App() {
       let pinInfo: PinInfo | null = null
       if (judge && sampleNow && !batchMode) {
         let retried = false
-        if (isThinExtract(out.extract, { sample: true })) {
+        if (getConfig().extractThinRetry && isThinExtract(out.extract, { sample: true })) {
           retried = true
           try {
             out = await runExtract(engine, { leaseText: text, images, cloudConsent: consent })
@@ -398,7 +411,7 @@ export default function App() {
         (out) => ({ kind: 'ok', out }) as Race,
         (e) => ({ kind: 'err', e }) as Race,
       ),
-      sleep(JUDGE_TIMEOUT_MS).then(() => ({ kind: 'timeout' }) as Race),
+      sleep(getConfig().judgeTimeoutMs).then(() => ({ kind: 'timeout' }) as Race),
     ])
     if (!current()) return
     if (r.kind === 'ok') {
@@ -414,7 +427,7 @@ export default function App() {
     setCheckSource('CACHED')
     setCheckMs(performance.now() - t0)
     setCached({
-      reason: r.kind === 'timeout' ? `The live check took longer than ${JUDGE_TIMEOUT_MS / 1000} seconds.` : friendlyError(r.e),
+      reason: r.kind === 'timeout' ? `The live check took longer than ${getConfig().judgeTimeoutMs / 1000} seconds.` : friendlyError(r.e),
       hasRecordedCloud: cv.hasRecordedCloud,
       recordedAt: cv.recordedAt,
       edited: ctx.original !== null && JSON.stringify(approved) !== ctx.original,
@@ -443,7 +456,7 @@ export default function App() {
 
   function downloadVerdictFixture() {
     if (!extract || !lastRaw) return
-    const data = verdictFixture(lastRaw, playbookId, CLOUD_MODEL, cleanExtract(extract))
+    const data = verdictFixture(lastRaw, playbookId, getConfig().cloudModel, cleanExtract(extract))
     const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -663,7 +676,7 @@ export default function App() {
                 <p className="mt-1.5 pb-1 text-text-secondary">
                   Models are pre-warmed on landing and the loop is timed. For the bundled sample lease only: the review is pinned to
                   the canonical sample values (labelled) so every run scores the same, and if the live cloud check fails or takes
-                  over {JUDGE_TIMEOUT_MS / 1000} s, a labelled cached result is shown while the live check keeps retrying. Your own
+                  over {cfg.judgeTimeoutMs / 1000} s, a labelled cached result is shown while the live check keeps retrying. Your own
                   documents are never substituted.
                 </p>
               </details>
@@ -694,6 +707,12 @@ export default function App() {
                   ) : null
                 }
               />
+            )}
+
+            {playbookOutdated(cfg.playbookMinVersion, PLAYBOOKS.map((p) => p.version)) && (
+              <p className="rounded-lg border border-border bg-surface px-4 py-2 text-sm" role="status" data-testid="playbook-notice">
+                A newer playbook is published. Reload to update.
+              </p>
             )}
 
             <nav aria-label="Progress" className="no-print">
@@ -934,6 +953,12 @@ export default function App() {
                 online={online}
                 receipt={receipt}
                 receiptLease={receiptLease}
+                receiptFooter={
+                  <p className="hint mt-1" data-testid="receipt-config">
+                    Config: model <span className="font-mono">{cfg.cloudModel}</span>, Judge timeout{' '}
+                    <span className="font-mono">{cfg.judgeTimeoutMs} ms</span>, source <span className="font-mono">{cfg.source}</span>.
+                  </p>
+                }
               />
             )}
           </div>

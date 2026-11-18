@@ -545,6 +545,16 @@ try {
     await page.close()
   }
 
+  // ---------- K) Item 8: Remote Config defaults ----------
+  {
+    const { page } = await oneClick('fakeCheck=ok')
+    ok(JSON.stringify(await counts(page)) === '[3,6,0]' && (await page.getByTestId('results-true-monthly').innerText()).includes('$1,961.95'), 'K: one click gives 3/6/0 and $1,961.95 with Remote Config unreachable')
+    const cfgText = await page.getByTestId('receipt-config').innerText()
+    ok(cfgText.includes('gemini-3.5-flash-lite') && cfgText.includes('8000 ms') && cfgText.includes('source default'), `K: receipt footer shows the active config ("${cfgText}")`)
+    ok((await page.getByTestId('playbook-notice').count()) === 0, 'K: no playbook notice with the default config')
+    await page.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()
