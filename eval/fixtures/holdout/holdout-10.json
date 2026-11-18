@@ -1,0 +1,38 @@
+{
+  "synthetic": true,
+  "id": "holdout-10",
+  "split": "holdout",
+  "jurisdiction": "US",
+  "truth": {
+    "currency": "USD",
+    "rentAmount": 2425,
+    "rentPeriod": "monthly",
+    "depositAmount": 3637.5,
+    "noticePeriodDays": 60,
+    "autoRenewal": "no",
+    "mandatoryFees": [
+      {
+        "name": "Lease Preparation Fee",
+        "amount": 115,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Move-In Fee",
+        "amount": 300,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Smart Home Fee",
+        "amount": 25,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Pest Control Fee",
+        "amount": 6,
+        "frequency": "monthly"
+      }
+    ],
+    "lateFeeAmount": 40,
+    "lateFeeGraceDays": 0
+  }
+}

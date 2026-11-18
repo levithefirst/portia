@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "id": "dev-01",
+  "split": "dev",
+  "jurisdiction": "US",
+  "truth": {
+    "currency": "USD",
+    "rentAmount": 1075,
+    "rentPeriod": "monthly",
+    "depositAmount": 2150,
+    "noticePeriodDays": 90,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Valet Trash Service",
+        "amount": 35,
+        "frequency": "monthly"
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "id": "holdout-03",
+  "split": "holdout",
+  "jurisdiction": "Lagos",
+  "truth": {
+    "currency": "NGN",
+    "rentAmount": 2350000,
+    "rentPeriod": "yearly",
+    "depositAmount": 235000,
+    "noticePeriodDays": 180,
+    "autoRenewal": "no",
+    "mandatoryFees": [
+      {
+        "name": "Development Levy",
+        "amount": 100000,
+        "frequency": "one-time"
+      }
+    ]
+  }
+}

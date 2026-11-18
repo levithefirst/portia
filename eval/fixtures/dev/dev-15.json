@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "id": "dev-15",
+  "split": "dev",
+  "jurisdiction": "Lagos",
+  "truth": {
+    "currency": "NGN",
+    "rentAmount": 3150000,
+    "rentPeriod": "yearly",
+    "depositAmount": 250000,
+    "noticePeriodDays": 180,
+    "autoRenewal": "no",
+    "mandatoryFees": [
+      {
+        "name": "Service Charge",
+        "amount": 200000,
+        "frequency": "yearly"
+      }
+    ],
+    "lateFeeAmount": 50000,
+    "lateFeeGraceDays": 14
+  }
+}

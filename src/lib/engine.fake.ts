@@ -20,7 +20,7 @@ declare global {
   }
 }
 
-/** ?fakeCheck=fail -> every check throws a 429. ?fakeCheck=slow -> first check takes 9 s. */
+/** ?fakeCheck=fail -> every check throws a 429. slow -> first check takes 9 s. offline -> network TypeError. */
 function checkMode(): string {
   return new URLSearchParams(location.search).get('fakeCheck') ?? 'ok'
 }
@@ -35,6 +35,16 @@ function extractMode(): string {
 }
 let extractCount = 0
 
+/**
+ * ?fakeDevice=available simulates a desktop Chrome where Gemini Nano is ready: the
+ * gate passes and the simulated SDK response reports inferenceSource "on_device".
+ * Default simulates a browser without Nano (like a Pixel 7).
+ */
+function deviceReady(): boolean {
+  return new URLSearchParams(location.search).get('fakeDevice') === 'available'
+}
+const extractSource = () => (deviceReady() ? ({ source: 'ON_DEVICE', rawSource: 'on_device' } as const) : ({ source: 'IN_CLOUD', rawSource: 'in_cloud' } as const))
+
 function record(c: Call) {
   window.__portiaCalls = [...(window.__portiaCalls ?? []), c]
 }
@@ -42,7 +52,7 @@ function record(c: Call) {
 export const fakeEngine: AiEngine = {
   kind: 'fake',
   async availability() {
-    return 'unsupported'
+    return deviceReady() ? 'available' : 'unsupported'
   },
   async prepareDevice() {
     /* nothing to download */
@@ -51,7 +61,7 @@ export const fakeEngine: AiEngine = {
     window.__portiaWarmAt = performance.now()
   },
   async willRunOnDevice() {
-    return false
+    return deviceReady()
   },
   async extract(prompt, images) {
     record({ kind: 'extract', prompt, imageCount: images.length })
@@ -59,18 +69,22 @@ export const fakeEngine: AiEngine = {
     const mode = extractMode()
     extractCount++
     if (mode === 'thin' || (mode === 'thinonce' && extractCount === 1)) {
-      return { text: JSON.stringify({ rentAmount: 1850, currency: 'USD' }), source: 'IN_CLOUD' }
+      return { text: JSON.stringify({ rentAmount: 1850, currency: 'USD' }), ...extractSource() }
     }
     if (mode === 'wild') {
       const drift = extractCount % 2 === 0 ? 270 : 90
-      return { text: JSON.stringify({ ...sample, noticePeriodDays: drift, mandatoryFees: sample.mandatoryFees.slice(0, 2 + (extractCount % 3)) }), source: 'IN_CLOUD' }
+      return { text: JSON.stringify({ ...sample, noticePeriodDays: drift, mandatoryFees: sample.mandatoryFees.slice(0, 2 + (extractCount % 3)) }), ...extractSource() }
     }
-    return { text: JSON.stringify(sample), source: 'IN_CLOUD' }
+    return { text: JSON.stringify(sample), ...extractSource() }
   },
   async check(prompt) {
     record({ kind: 'check', prompt, imageCount: 0 })
     const mode = checkMode()
     checkCount++
+    if (mode === 'offline') {
+      await new Promise((r) => setTimeout(r, 100))
+      throw new TypeError('Failed to fetch')
+    }
     if (mode === 'fail') {
       await new Promise((r) => setTimeout(r, 300))
       throw new Error('[GoogleGenerativeAI Error]: 429 RESOURCE_EXHAUSTED (fake)')
@@ -96,6 +110,7 @@ export const fakeEngine: AiEngine = {
         },
       ]),
       source: 'IN_CLOUD',
+      rawSource: 'in_cloud',
     }
   },
 }

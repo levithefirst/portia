@@ -58,7 +58,11 @@ export interface DisplayFinding extends Finding {
 }
 
 /** Normalised inference source label. The SDK value is lowercase ("on_device" / "in_cloud"). */
-export type SourceLabel = 'ON_DEVICE' | 'IN_CLOUD' | 'FIXTURE' | 'CACHED'
+/**
+ * ON_DEVICE / IN_CLOUD come only from the SDK. FIXTURE = bundled sample data,
+ * CACHED = bundled cached verdict, RULES_ONLY = in-browser playbook rules with no model call.
+ */
+export type SourceLabel = 'ON_DEVICE' | 'IN_CLOUD' | 'FIXTURE' | 'CACHED' | 'RULES_ONLY'
 
 export interface ImagePart {
   type: 'inlineData'

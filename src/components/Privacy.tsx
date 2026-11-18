@@ -16,8 +16,9 @@ export function Privacy() {
         <h2 className="text-lg font-semibold">1. Extract: on your device when possible</h2>
         <ul className="mt-2 list-disc space-y-1.5 pl-5">
           <li>
-            Portia reads your pasted text or JPEG/PNG page photos in the browser. PDFs and other file types are rejected and never
-            sent anywhere.
+            Portia reads your pasted text, PDFs, or JPEG/PNG page photos in the browser. A PDF is parsed in this browser by
+            pdf.js: its text goes into the text box, or, for a scanned PDF, its pages are turned into PNG images here. Parsing a
+            PDF sends nothing anywhere. Other file types are rejected.
           </li>
           <li>
             The extract model uses Firebase AI Logic in <span className="font-mono text-sm">PREFER_ON_DEVICE</span> mode. When
@@ -68,6 +69,18 @@ export function Privacy() {
             saved in this browser's localStorage. Lease text and photos are never stored. Turning it off deletes the saved copy.
           </li>
           <li>Your theme choice is saved in localStorage.</li>
+          <li>
+            After every run, a privacy receipt lists each step, where it ran and what left this device, measured from the request
+            Portia actually passed to Firebase AI Logic.
+          </li>
+          <li>
+            On the tool pages, Portia asks Firebase Remote Config for a few settings (cloud model name, timeouts). That request
+            contains no document data. If it fails, built-in defaults are used.
+          </li>
+          <li>
+            The installed app shell (pages, scripts and styles) is cached by a service worker so Portia opens offline. It never
+            caches your lease, and it never handles requests to Firebase, Google or reCAPTCHA.
+          </li>
           <li>
             Judge Mode (<span className="font-mono text-sm">?judge=1</span>) sets a flag in sessionStorage for this tab and
             initialises Firebase and App Check as soon as the page loads instead of on your first click. It sends no document

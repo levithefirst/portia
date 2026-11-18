@@ -1,0 +1,18 @@
+SYNTHETIC TEST LEASE dev-09. Not a real agreement. All names and places are invented.
+
+TENANCY AGREEMENT
+
+Premises: 21, 315 Lantern Row, Ikota Gardens Estate
+Landlord: Imaginary Estates Co.
+Tenant: Tenant B
+
+1. RENT. The Tenant shall pay rent of N2,700,000 per annum.
+2. DEPOSIT. The Tenant shall pay a caution deposit of N400,000 at signing.
+3. LATE PAYMENT. No late charge applies to overdue rent.
+4. CHARGES. The following charges are mandatory and payable in addition to rent:
+   - Development Levy: N150,000 once, at signing
+   - Legal Fee: N270,000 once, at signing
+   - Agency Fee: N270,000 once, at signing
+   - Service Charge: N300,000 per year
+5. TERM AND RENEWAL. This agreement renews automatically for a further term of the same length unless the Tenant gives written notice at least 180 days before the end of the term.
+6. REPAIRS. The Landlord is responsible for structural repairs. The Tenant reports defects promptly.

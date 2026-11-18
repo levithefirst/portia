@@ -8,3 +8,12 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// Offline app shell. Production builds only (not dev, not the e2e test build), after load.
+if (import.meta.env.PROD && import.meta.env.MODE === 'production' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* the app works without the service worker */
+    })
+  })
+}

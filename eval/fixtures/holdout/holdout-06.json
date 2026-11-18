@@ -1,0 +1,36 @@
+{
+  "synthetic": true,
+  "id": "holdout-06",
+  "split": "holdout",
+  "jurisdiction": "Lagos",
+  "truth": {
+    "currency": "NGN",
+    "rentAmount": 3400000,
+    "rentPeriod": "yearly",
+    "depositAmount": 340000,
+    "noticePeriodDays": 180,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Agency Fee",
+        "amount": 340000,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Service Charge",
+        "amount": 600000,
+        "frequency": "yearly"
+      },
+      {
+        "name": "Development Levy",
+        "amount": 50000,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Legal Fee",
+        "amount": 340000,
+        "frequency": "one-time"
+      }
+    ]
+  }
+}

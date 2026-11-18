@@ -8,9 +8,12 @@ import { Results } from './components/Results'
 import { Footer, Header, routeFromPath, type Route } from './components/Shell'
 import { Hero } from './components/Hero'
 import { Landing } from './components/Landing'
+import { Eval } from './components/Eval'
 import type { AiEngine } from './lib/engine'
 import { missingEnv } from './lib/firebase'
 import { loadEngine } from './lib/getEngine'
+import { isNetworkError, isOnline, useOnline } from './lib/network'
+import { checkStep, extractStep, rulesStep, type ReceiptStep } from './lib/receipt'
 import { fileToGenerativePart } from './lib/intake'
 import { checkDeviceAvailability, type DeviceAvailability } from './lib/onDevice'
 import { getPlaybook, type Playbook } from './lib/playbooks'
@@ -31,14 +34,15 @@ import {
   isJudgeMode,
   isRecordMode,
   JUDGE_RETRY_DELAYS_MS,
-  JUDGE_TIMEOUT_MS,
   isThinExtract,
   matchSample,
   SAMPLE_EXTRACT,
   sleep,
   verdictFixture,
 } from './lib/judge'
-import { CLOUD_MODEL } from './lib/firebase'
+import { loadRemoteConfig } from './lib/firebase'
+import { getConfig, playbookOutdated, useConfig } from './lib/config'
+import { PLAYBOOKS } from './lib/playbooks'
 import { runPlaybook } from './lib/rules'
 import {
   forgetApproved,
@@ -87,6 +91,9 @@ function friendlyError(e: unknown): string {
   if (/input.?quota|too large|exceed/i.test(msg)) return `The input is too large for the on-device model. Extract in smaller batches. (${msg})`
   return msg
 }
+
+const OFFLINE_NO_NANO =
+  'You are offline and this browser has no on-device model, so Portia cannot read a new lease right now. Try the sample, or reconnect.'
 
 const STEPS: { id: Step; label: string }[] = [
   { id: 'intake', label: 'Document' },
@@ -152,6 +159,11 @@ export default function App() {
   const oneClickStart = useRef<number | null>(null)
   const [oneClickBusy, setOneClickBusy] = useState(false)
   const [checkStartedAt, setCheckStartedAt] = useState<number | null>(null)
+  const online = useOnline()
+  const cfg = useConfig()
+  const [receipt, setReceipt] = useState<ReceiptStep[]>([])
+  const [receiptLease, setReceiptLease] = useState('')
+  const setCheckRow = (row: ReceiptStep) => setReceipt((r) => [...r.filter((s) => s.step !== 'check'), row])
 
   const [remember, setRemember] = useState(rememberEnabled())
   const [saved, setSaved] = useState<Remembered | null>(loadApproved())
@@ -172,6 +184,17 @@ export default function App() {
   useEffect(() => {
     if (engine !== undefined) void refreshAvailability()
   }, [engine, refreshAvailability])
+
+  // Remote Config in the background on tool routes only. Never awaited; defaults apply until it resolves.
+  const rcStarted = useRef(false)
+  useEffect(() => {
+    if (rcStarted.current || engine?.kind !== 'firebase' || (route !== 'check' && route !== 'eval')) return
+    rcStarted.current = true
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }
+    const run = () => void loadRemoteConfig()
+    if (w.requestIdleCallback) w.requestIdleCallback(run, { timeout: 2000 })
+    else setTimeout(run, 0)
+  }, [engine, route])
 
   // Judge Mode pre-warm: on landing, without blocking the page or waiting for a tap.
   useEffect(() => {
@@ -234,6 +257,12 @@ export default function App() {
       setExtractError({ message: 'Paste the lease text or add at least one page photo first.' })
       return null
     }
+    // Offline without Gemini Nano: nothing can read a new lease. Do not offer cloud consent.
+    if (!isOnline() && avail !== 'available') {
+      setShowConsent(false)
+      setExtractError({ message: OFFLINE_NO_NANO })
+      return null
+    }
     // User gesture: start (or attach to) the on-device model, never at module load.
     if (avail === 'downloadable' && !preparing) void prepare()
     if (avail === 'available') {
@@ -253,7 +282,7 @@ export default function App() {
       let pinInfo: PinInfo | null = null
       if (judge && sampleNow && !batchMode) {
         let retried = false
-        if (isThinExtract(out.extract, { sample: true })) {
+        if (getConfig().extractThinRetry && isThinExtract(out.extract, { sample: true })) {
           retried = true
           try {
             out = await runExtract(engine, { leaseText: text, images, cloudConsent: consent })
@@ -265,6 +294,9 @@ export default function App() {
         pinInfo = { kind: isThinExtract(out.extract, { sample: true }) ? 'fallback' : 'pinned', ...m, retried }
         next = structuredClone(SAMPLE_EXTRACT)
       }
+      const row = extractStep({ ranOn: out.source, raw: out.rawSource, ms: performance.now() - t0, prompt: out.prompt, leaseText: text, images })
+      setReceipt((r) => (batchMode ? [...r.filter((s) => s.step === 'extract'), row] : [row]))
+      setReceiptLease((l) => (batchMode ? `${l}\n${text}` : text))
       setExtract(next)
       setPin(pinInfo)
       setUnsure([])
@@ -295,6 +327,8 @@ export default function App() {
     setExtractSource('FIXTURE')
     setExtractMs(null)
     setExtractIsSample(false)
+    setReceipt([extractStep({ ranOn: 'FIXTURE', ms: 0, prompt: '', leaseText: '', images: [] })])
+    setReceiptLease('')
     setOriginalExtract(JSON.stringify(cleanExtract(sampleExtract as LeaseExtract)))
     setPin(null)
     setUnsure([])
@@ -310,8 +344,25 @@ export default function App() {
   }
 
   async function runCloudCheck(approved: LeaseExtract, ruleFindings: DisplayFinding[], ctx: CheckCtx) {
-    if (!engine) {
+    const useCache = judge && ctx.sample
+    /** Offline verdict: the in-browser rules already give tiles, costs and questions. No model call. */
+    const finishRulesOnly = (t0: number) => {
+      setCheckRow(checkStep({ ranOn: 'RULES_ONLY', ms: performance.now() - t0, prompt: '' }))
+      setFindings(ruleFindings)
+      setCheckSource('RULES_ONLY')
+      setCheckMs(performance.now() - t0)
+      setCheckError(null)
+      setChecking(false)
       finishOneClick()
+    }
+    if (!engine) {
+      if (!isOnline()) finishRulesOnly(performance.now())
+      finishOneClick()
+      return
+    }
+    if (!useCache && !isOnline()) {
+      checkRun.current++
+      finishRulesOnly(performance.now())
       return
     }
     const runId = ++checkRun.current
@@ -326,6 +377,7 @@ export default function App() {
     setCheckPrompt(buildCheckPrompt(approved, ctx.playbook, ctx.unsure))
     const t0 = performance.now()
     const applyLive = (out: CheckOutput) => {
+      setCheckRow(checkStep({ ranOn: out.source, raw: out.rawSource, ms: performance.now() - t0, prompt: out.prompt }))
       setFindings(mergeFindings(ruleFindings, out.findings))
       setCheckSource(out.source)
       setCheckMs(performance.now() - t0)
@@ -335,13 +387,15 @@ export default function App() {
     const live = runCheck(engine, approved, ctx.playbook, ctx.unsure)
 
     // Cached fallback is allowed ONLY in Judge Mode and ONLY for the bundled sample lease.
-    const useCache = judge && ctx.sample
     if (!useCache) {
       try {
         const out = await live
         if (current()) applyLive(out)
       } catch (e) {
-        if (current()) setCheckError(e instanceof ParseError ? `${e.message} Retry to ask again.` : friendlyError(e))
+        if (current()) {
+          if (isNetworkError(e) || !isOnline()) finishRulesOnly(t0)
+          else setCheckError(e instanceof ParseError ? `${e.message} Retry to ask again.` : friendlyError(e))
+        }
       } finally {
         if (current()) {
           setChecking(false)
@@ -357,7 +411,7 @@ export default function App() {
         (out) => ({ kind: 'ok', out }) as Race,
         (e) => ({ kind: 'err', e }) as Race,
       ),
-      sleep(JUDGE_TIMEOUT_MS).then(() => ({ kind: 'timeout' }) as Race),
+      sleep(getConfig().judgeTimeoutMs).then(() => ({ kind: 'timeout' }) as Race),
     ])
     if (!current()) return
     if (r.kind === 'ok') {
@@ -368,11 +422,12 @@ export default function App() {
     }
 
     const cv = cachedSampleVerdict(ctx.playbook, approved)
+    setCheckRow(checkStep({ ranOn: 'CACHED', ms: performance.now() - t0, prompt: '' }))
     setFindings(mergeFindings(ruleFindings, cv.cloudFindings))
     setCheckSource('CACHED')
     setCheckMs(performance.now() - t0)
     setCached({
-      reason: r.kind === 'timeout' ? `The live check took longer than ${JUDGE_TIMEOUT_MS / 1000} seconds.` : friendlyError(r.e),
+      reason: r.kind === 'timeout' ? `The live check took longer than ${getConfig().judgeTimeoutMs / 1000} seconds.` : friendlyError(r.e),
       hasRecordedCloud: cv.hasRecordedCloud,
       recordedAt: cv.recordedAt,
       edited: ctx.original !== null && JSON.stringify(approved) !== ctx.original,
@@ -401,7 +456,7 @@ export default function App() {
 
   function downloadVerdictFixture() {
     if (!extract || !lastRaw) return
-    const data = verdictFixture(lastRaw, playbookId, CLOUD_MODEL, cleanExtract(extract))
+    const data = verdictFixture(lastRaw, playbookId, getConfig().cloudModel, cleanExtract(extract))
     const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -415,7 +470,10 @@ export default function App() {
     if (!source) return
     const approved = cleanExtract(source)
     const pb = ctx?.playbook ?? playbook
+    const tRules = performance.now()
     const ruleFindings = runPlaybook(pb, approved)
+    const rulesRow = rulesStep(performance.now() - tRules)
+    setReceipt((r) => [...r.filter((s) => s.step === 'extract'), rulesRow])
     setFindings(ruleFindings)
     setCheckSource(null)
     setCheckPrompt(null)
@@ -516,6 +574,8 @@ export default function App() {
 
   function startOver() {
     checkRun.current++
+    setReceipt([])
+    setReceiptLease('')
     oneClickStart.current = null
     setOneClickMs(null)
     setPin(null)
@@ -556,6 +616,8 @@ export default function App() {
     setExtractIsSample(false)
     setExtractMs(null)
     setPin(null)
+    setReceipt([])
+    setReceiptLease('')
     setOriginalExtract(JSON.stringify(cleanExtract(saved.extract)))
     setPlaybookId(saved.playbookId)
     setStep('review')
@@ -598,6 +660,8 @@ export default function App() {
           <Landing avail={avail} />
         ) : route === 'privacy' ? (
           <Privacy />
+        ) : route === 'eval' ? (
+          <Eval engine={engine} avail={avail} />
         ) : (
           <div className="space-y-6">
             {judge && (
@@ -612,7 +676,7 @@ export default function App() {
                 <p className="mt-1.5 pb-1 text-text-secondary">
                   Models are pre-warmed on landing and the loop is timed. For the bundled sample lease only: the review is pinned to
                   the canonical sample values (labelled) so every run scores the same, and if the live cloud check fails or takes
-                  over {JUDGE_TIMEOUT_MS / 1000} s, a labelled cached result is shown while the live check keeps retrying. Your own
+                  over {cfg.judgeTimeoutMs / 1000} s, a labelled cached result is shown while the live check keeps retrying. Your own
                   documents are never substituted.
                 </p>
               </details>
@@ -643,6 +707,12 @@ export default function App() {
                   ) : null
                 }
               />
+            )}
+
+            {playbookOutdated(cfg.playbookMinVersion, PLAYBOOKS.map((p) => p.version)) && (
+              <p className="rounded-lg border border-border bg-surface px-4 py-2 text-sm" role="status" data-testid="playbook-notice">
+                A newer playbook is published. Reload to update.
+              </p>
             )}
 
             <nav aria-label="Progress" className="no-print">
@@ -798,6 +868,7 @@ export default function App() {
                     error={prepError}
                     onPrepare={prepare}
                     aiReady={aiReady}
+                    online={online}
                   />
                   <div className="paper p-4 text-sm">
                     <p className="eyebrow">Why this matters</p>
@@ -879,6 +950,15 @@ export default function App() {
                 }
                 onStartOver={startOver}
                 cloudReviewAvailable={aiReady}
+                online={online}
+                receipt={receipt}
+                receiptLease={receiptLease}
+                receiptFooter={
+                  <p className="hint mt-1" data-testid="receipt-config">
+                    Config: model <span className="font-mono">{cfg.cloudModel}</span>, Judge timeout{' '}
+                    <span className="font-mono">{cfg.judgeTimeoutMs} ms</span>, source <span className="font-mono">{cfg.source}</span>.
+                  </p>
+                }
               />
             )}
           </div>

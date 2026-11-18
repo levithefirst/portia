@@ -30,6 +30,8 @@ export interface ExtractInput {
 export interface ExtractOutput {
   extract: LeaseExtract
   source: SourceLabel
+  /** Exact SDK inferenceSource string. */
+  rawSource?: string
   prompt: string
 }
 
@@ -44,8 +46,8 @@ export async function runExtract(engine: AiEngine, input: ExtractInput): Promise
   const onDevice = await engine.willRunOnDevice(prompt, mimeTypes)
   if (!onDevice && !input.cloudConsent) throw new ConsentRequiredError()
 
-  const { text, source } = await engine.extract(prompt, input.images)
-  return { extract: parseExtract(text), source, prompt }
+  const { text, source, rawSource } = await engine.extract(prompt, input.images)
+  return { extract: parseExtract(text), source, rawSource, prompt }
 }
 
 export function parseJson(text: string): unknown {
@@ -148,6 +150,8 @@ export interface CheckOutput {
   prompt: string
   /** Raw model text, kept so Judge Mode can record the sample verdict fixture. */
   raw: string
+  /** Exact SDK inferenceSource string. */
+  rawSource?: string
 }
 
 /** Sends ONLY the approved JSON (plus the public playbook rules) to the cloud check model. */
@@ -158,8 +162,8 @@ export async function runCheck(
   unsureFields: string[],
 ): Promise<CheckOutput> {
   const prompt = buildCheckPrompt(approved, playbook, unsureFields)
-  const { text, source } = await engine.check(prompt)
-  return { findings: parseFindings(text, playbook), source, prompt, raw: text }
+  const { text, source, rawSource } = await engine.check(prompt)
+  return { findings: parseFindings(text, playbook), source, prompt, raw: text, rawSource }
 }
 
 const STATUSES: Status[] = ['RED', 'AMBER', 'GREEN']

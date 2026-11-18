@@ -1,0 +1,18 @@
+SYNTHETIC TEST LEASE dev-04. Not a real agreement. All names and places are invented.
+
+RESIDENTIAL LEASE
+
+Premises: 31B, 76 Thistle Court, Cedar Bend
+Landlord: Fictional Lettings Ltd
+Tenant: Tenant B
+
+1. RENT. The Tenant shall pay rent of $1,375 per calendar month.
+2. DEPOSIT. The Tenant shall pay a security deposit of $2,062.50 at signing.
+3. LATE PAYMENT. If rent remains unpaid five (5) days after the due date, a late charge of $195 applies.
+4. CHARGES. The following charges are mandatory and payable in addition to rent:
+   - Lease Preparation Fee: $135 once, at signing
+   - Utility Billing Administration Fee: $9.95 per month
+   - Package Locker Fee: $20 per month
+   - Administrative Fee: $325 once, at signing
+5. TERM AND RENEWAL. This agreement ends on the last day of the term and does not renew automatically. The Tenant must give 60 days written notice before leaving.
+6. REPAIRS. The Landlord is responsible for structural repairs. The Tenant reports defects promptly.

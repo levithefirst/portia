@@ -179,6 +179,7 @@ const WHERE: Record<SourceLabel, string> = {
   IN_CLOUD: 'cloud',
   FIXTURE: 'sample data',
   CACHED: 'cached sample',
+  RULES_ONLY: 'rules in this browser (offline)',
 }
 
 const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`

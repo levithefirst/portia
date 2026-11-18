@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "id": "dev-02",
+  "split": "dev",
+  "jurisdiction": "England & Wales",
+  "truth": {
+    "currency": "GBP",
+    "rentAmount": 1475,
+    "rentPeriod": "monthly",
+    "depositAmount": 1701.92,
+    "noticePeriodDays": 60,
+    "autoRenewal": "no",
+    "mandatoryFees": [
+      {
+        "name": "Inventory Check Fee",
+        "amount": 90,
+        "frequency": "one-time"
+      }
+    ],
+    "lateFeeAmount": 30,
+    "lateFeeGraceDays": 14
+  }
+}

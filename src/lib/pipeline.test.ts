@@ -97,16 +97,19 @@ describe('parsing', () => {
 })
 
 describe('intake', () => {
-  it('rejects PDFs with the standard message', () => {
+  it('accepts PDFs and JPEG/PNG, rejects other types with the standard message', () => {
     const v = sortFiles([
       new File(['%PDF'], 'lease.pdf', { type: 'application/pdf' }),
+      new File(['%PDF'], 'scan.PDF', { type: '' }),
       new File(['x'], 'p1.jpg', { type: 'image/jpeg' }),
       new File(['x'], 'p2.png', { type: 'image/png' }),
       new File(['x'], 'p3.heic', { type: 'image/heic' }),
+      new File(['x'], 'lease.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }),
     ])
+    expect(v.pdfs.map((f) => f.name)).toEqual(['lease.pdf', 'scan.PDF'])
     expect(v.accepted.map((f) => f.name)).toEqual(['p1.jpg', 'p2.png'])
-    expect(v.rejected).toHaveLength(2)
-    expect(v.rejected[0].reason).toBe(REJECT_MESSAGE)
+    expect(v.rejected.map((r) => r.name)).toEqual(['p3.heic', 'lease.docx'])
+    expect(v.rejected[1].reason).toBe(REJECT_MESSAGE)
   })
 })
 

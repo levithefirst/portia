@@ -1,0 +1,16 @@
+SYNTHETIC TEST LEASE dev-06. Not a real agreement. All names and places are invented.
+
+TENANCY AGREEMENT
+
+Premises: 1, 502 Copperleaf Drive, Adeniran Crescent Estate
+Landlord: Placeholder Properties Ltd
+Tenant: Test Tenant
+
+1. RENT. The Tenant shall pay rent of N1,200,000 per annum.
+2. DEPOSIT. The Tenant shall pay a caution deposit of N120,000 at signing.
+3. LATE PAYMENT. If rent remains unpaid fourteen (14) days after the due date, a late charge of N30,000 applies.
+4. CHARGES. The following charges are mandatory and payable in addition to rent:
+   - Development Levy: N50,000 once, at signing
+   - Service Charge: N300,000 per year
+5. TERM AND RENEWAL. This agreement ends on the last day of the term and does not renew automatically. The Tenant must give six (6) months written notice before leaving.
+6. REPAIRS. The Landlord is responsible for structural repairs. The Tenant reports defects promptly.

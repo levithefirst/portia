@@ -1,13 +1,16 @@
 import type { ImagePart } from './types'
 
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png']
+export const ACCEPTED_PDF_TYPE = 'application/pdf'
 export const REJECT_MESSAGE =
-  'Portia accepts pasted text or JPEG/PNG page images. Export or photograph each page.'
+  'Portia accepts pasted text, PDFs, or JPEG/PNG page images. Export other files as PDF, or photograph each page.'
 export const MAX_FILE_BYTES = 15 * 1024 * 1024
 export const MAX_QUEUED_PAGES = 9
 
 export interface FileVerdict {
   accepted: File[]
+  /** PDFs, read in this browser by pdf.ts (text, or rendered page images). */
+  pdfs: File[]
   rejected: { name: string; reason: string }[]
 }
 
@@ -16,15 +19,19 @@ function sniffType(file: File): string {
   const n = file.name.toLowerCase()
   if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg'
   if (n.endsWith('.png')) return 'image/png'
+  if (n.endsWith('.pdf')) return ACCEPTED_PDF_TYPE
   return ''
 }
 
-/** Accepts only JPEG/PNG. PDFs and everything else are rejected and never sent anywhere. */
+/** Accepts JPEG/PNG images and PDFs. Everything else is rejected and never sent anywhere. */
 export function sortFiles(files: File[]): FileVerdict {
-  const out: FileVerdict = { accepted: [], rejected: [] }
+  const out: FileVerdict = { accepted: [], pdfs: [], rejected: [] }
   for (const f of files) {
-    const t = sniffType(f)
-    if (!ACCEPTED_IMAGE_TYPES.includes(t)) {
+    const t = f.name.toLowerCase().endsWith('.pdf') ? ACCEPTED_PDF_TYPE : sniffType(f)
+    if (t === ACCEPTED_PDF_TYPE) {
+      if (f.size > MAX_FILE_BYTES) out.rejected.push({ name: f.name, reason: 'This PDF is larger than 15 MB. Split it into smaller files.' })
+      else out.pdfs.push(f)
+    } else if (!ACCEPTED_IMAGE_TYPES.includes(t)) {
       out.rejected.push({ name: f.name, reason: REJECT_MESSAGE })
     } else if (f.size > MAX_FILE_BYTES) {
       out.rejected.push({ name: f.name, reason: 'This image is larger than 15 MB. Take a smaller photo or crop the page.' })

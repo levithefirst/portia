@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "id": "holdout-01",
+  "split": "holdout",
+  "jurisdiction": "US",
+  "truth": {
+    "currency": "USD",
+    "rentAmount": 3075,
+    "rentPeriod": "monthly",
+    "depositAmount": 4612.5,
+    "noticePeriodDays": 60,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Valet Trash Service",
+        "amount": 35,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Utility Billing Administration Fee",
+        "amount": 9.95,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Move-In Fee",
+        "amount": 175,
+        "frequency": "one-time"
+      }
+    ],
+    "lateFeeAmount": 105,
+    "lateFeeGraceDays": 0
+  }
+}

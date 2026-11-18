@@ -1,0 +1,15 @@
+SYNTHETIC TEST LEASE holdout-01. Not a real agreement. All names and places are invented.
+
+SCHEDULE OF TERMS
+
+Property ............ 30C, 761 Sable Street, Pine Hollow
+Landlord ............ Fictional Lettings Ltd
+Rent ................ $3,075 per calendar month
+Deposit ............. $4,612.50
+Late payment ........ Rent not received by the due date is late, and a late charge of $105 applies immediately.
+Renewal ............. This agreement renews automatically for a further term of the same length unless the Tenant gives written notice at least 60 days before the end of the term.
+
+Additional charges. The following charges are mandatory and payable in addition to rent:
+   - Valet Trash Service: $35 per month
+   - Utility Billing Administration Fee: $9.95 per month
+   - Move-In Fee: $175 once, at signing

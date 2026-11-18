@@ -9,13 +9,14 @@ import {
 } from 'firebase/ai'
 import { checkSchema, leaseSchema } from './schema'
 import { ON_DEVICE_CREATE_OPTIONS } from './onDevice'
+import { DEFAULT_CLOUD_MODEL, getConfig, RC_DEFAULTS, RC_FETCH_RACE_MS, RC_KEYS, RC_MIN_FETCH_INTERVAL_MS, sanitizeConfig, setConfig } from './config'
 
 /**
  * Default cloud model for Firebase AI Logic hybrid inference starting with
  * JS SDK v13.0.0 (configuration-options page). Set explicitly because the
  * official structured-output sample passes inCloudParams.model.
  */
-export const CLOUD_MODEL = 'gemini-3.5-flash-lite'
+export const CLOUD_MODEL = DEFAULT_CLOUD_MODEL
 
 declare global {
   // Set to true in DEV builds only, before initializeAppCheck (App Check debug provider docs).
@@ -56,9 +57,9 @@ export interface PortiaModels {
 let models: PortiaModels | null = null
 let app: FirebaseApp | null = null
 
-/** Lazily initializes Firebase, App Check and both model instances. No download is started here. */
-export function getModels(): PortiaModels {
-  if (models) return models
+/** Lazily initializes the Firebase app and App Check (once). */
+export function getFirebaseApp(): FirebaseApp {
+  if (app) return app
   if (!isFirebaseConfigured) {
     throw new Error(`Firebase is not configured. Missing: ${missingEnv().join(', ')}`)
   }
@@ -75,15 +76,42 @@ export function getModels(): PortiaModels {
     provider: new ReCaptchaEnterpriseProvider(siteKey || 'dev-debug-provider-in-use'),
     isTokenAutoRefreshEnabled: true,
   })
+  return app
+}
 
-  const ai = getAI(app, { backend: new GoogleAIBackend() })
+/**
+ * Starts Remote Config in the background: fetchAndActivate raced against 1.5 s.
+ * Never awaited by the UI; on any failure the defaults stay in place.
+ */
+export async function loadRemoteConfig(): Promise<void> {
+  try {
+    const rc = await import('firebase/remote-config')
+    if (!(await rc.isSupported())) return
+    const remoteConfig = rc.getRemoteConfig(getFirebaseApp())
+    remoteConfig.settings.minimumFetchIntervalMillis = RC_MIN_FETCH_INTERVAL_MS
+    remoteConfig.defaultConfig = RC_DEFAULTS
+    await Promise.race([rc.fetchAndActivate(remoteConfig), new Promise((r) => setTimeout(r, RC_FETCH_RACE_MS))])
+    const raw = Object.fromEntries(Object.values(RC_KEYS).map((k) => [k, rc.getValue(remoteConfig, k).asString()]))
+    const remote = Object.values(RC_KEYS).some((k) => rc.getValue(remoteConfig, k).getSource() === 'remote')
+    setConfig({ ...sanitizeConfig(raw), source: remote ? 'remote' : 'default' })
+  } catch {
+    /* Remote Config unreachable or invalid: keep the defaults */
+  }
+}
+
+/** Lazily initializes Firebase, App Check and both model instances. No download is started here. */
+export function getModels(): PortiaModels {
+  if (models) return models
+  const ai = getAI(getFirebaseApp(), { backend: new GoogleAIBackend() })
+  // Cloud model from Remote Config if it has resolved by now, otherwise the default.
+  const cloudModel = getConfig().cloudModel
 
   // 1) Extract: on-device first. Structured JSON on both sides per the hybrid docs.
   //    Portia never lets this model fall back to the cloud silently: see lib/gate.ts.
   const extractModel = getGenerativeModel(ai, {
     mode: InferenceMode.PREFER_ON_DEVICE,
     inCloudParams: {
-      model: CLOUD_MODEL,
+      model: cloudModel,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: leaseSchema,
@@ -99,7 +127,7 @@ export function getModels(): PortiaModels {
   const checkModel = getGenerativeModel(ai, {
     mode: InferenceMode.ONLY_IN_CLOUD,
     inCloudParams: {
-      model: CLOUD_MODEL,
+      model: cloudModel,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: checkSchema,

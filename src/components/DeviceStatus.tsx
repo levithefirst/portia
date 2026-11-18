@@ -8,6 +8,7 @@ interface Props {
   error: string | null
   onPrepare: () => void
   aiReady: boolean
+  online?: boolean
 }
 
 const COPY: Record<DeviceAvailability | 'checking', { title: string; body: string }> = {
@@ -42,7 +43,7 @@ export function heroLine(availability: DeviceAvailability | 'checking'): string 
   return 'Gemini Nano is not available on this device, so extraction needs your consent to use cloud Gemini. When Nano is available in desktop Chrome, the document is read on your device and only the facts you approve go to the cloud.'
 }
 
-export function DeviceStatus({ availability, progress, preparing, error, onPrepare, aiReady }: Props) {
+export function DeviceStatus({ availability, progress, preparing, error, onPrepare, aiReady, online = true }: Props) {
   const c = COPY[availability]
   const onDevice = availability === 'available'
   const canPrepare = aiReady && (availability === 'downloadable' || availability === 'downloading')
@@ -82,6 +83,11 @@ export function DeviceStatus({ availability, progress, preparing, error, onPrepa
               </div>
               <p className="hint mt-1 font-mono">Download {pct}%</p>
             </div>
+          )}
+          {!online && (
+            <p className="mt-2 text-sm" role="status" data-testid="offline-note">
+              You are offline. Playbook rules still run in this browser{onDevice ? ', and Gemini Nano can read a lease here' : ''}.
+            </p>
           )}
           {error && (
             <p className="mt-2 text-sm text-red-text" role="alert">

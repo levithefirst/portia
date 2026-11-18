@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "id": "dev-08",
+  "split": "dev",
+  "jurisdiction": "England & Wales",
+  "truth": {
+    "currency": "GBP",
+    "rentAmount": 800,
+    "rentPeriod": "monthly",
+    "depositAmount": 1107.69,
+    "noticePeriodDays": 30,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Communal Cleaning Charge",
+        "amount": 35,
+        "frequency": "monthly"
+      }
+    ]
+  }
+}

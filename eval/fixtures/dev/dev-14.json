@@ -1,0 +1,26 @@
+{
+  "synthetic": true,
+  "id": "dev-14",
+  "split": "dev",
+  "jurisdiction": "England & Wales",
+  "truth": {
+    "currency": "GBP",
+    "rentAmount": 950,
+    "rentPeriod": "monthly",
+    "depositAmount": 1096.15,
+    "noticePeriodDays": 60,
+    "autoRenewal": "no",
+    "mandatoryFees": [
+      {
+        "name": "Tenancy Administration Fee",
+        "amount": 225,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Inventory Check Fee",
+        "amount": 80,
+        "frequency": "one-time"
+      }
+    ]
+  }
+}

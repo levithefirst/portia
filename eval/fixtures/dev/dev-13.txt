@@ -1,0 +1,9 @@
+SYNTHETIC TEST LEASE dev-13. Not a real agreement. All names and places are invented.
+
+This agreement is made between Placeholder Properties Ltd (the Landlord) and Test Tenant (the Tenant) for 25B, 883 Marigold Way, Ashford Mills.
+
+The rent is $1,375 per calendar month, and the Tenant pays a deposit of $1,375 when signing. If rent remains unpaid ten (10) days after the due date, a late charge of $55 applies.
+
+In addition to rent, the Tenant must pay a Technology Package of $40 per month. These charges are not optional.
+
+This agreement ends on the last day of the term and does not renew automatically. The Tenant must give 60 days written notice before leaving.

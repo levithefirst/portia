@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "id": "holdout-05",
+  "split": "holdout",
+  "jurisdiction": "England & Wales",
+  "truth": {
+    "currency": "GBP",
+    "rentAmount": 1425,
+    "rentPeriod": "monthly",
+    "depositAmount": 1973.08,
+    "noticePeriodDays": 30,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Tenancy Administration Fee",
+        "amount": 325,
+        "frequency": "one-time"
+      }
+    ],
+    "lateFeeAmount": 30,
+    "lateFeeGraceDays": 7
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "synthetic": true,
+  "id": "dev-06",
+  "split": "dev",
+  "jurisdiction": "Lagos",
+  "truth": {
+    "currency": "NGN",
+    "rentAmount": 1200000,
+    "rentPeriod": "yearly",
+    "depositAmount": 120000,
+    "noticePeriodDays": 180,
+    "autoRenewal": "no",
+    "mandatoryFees": [
+      {
+        "name": "Development Levy",
+        "amount": 50000,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Service Charge",
+        "amount": 300000,
+        "frequency": "yearly"
+      }
+    ],
+    "lateFeeAmount": 30000,
+    "lateFeeGraceDays": 14
+  }
+}

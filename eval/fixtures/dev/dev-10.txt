@@ -1,0 +1,14 @@
+SYNTHETIC TEST LEASE dev-10. Not a real agreement. All names and places are invented.
+
+RESIDENTIAL LEASE
+
+Premises: 30B, 704 Juniper Terrace, Brookhaven Falls
+Landlord: Placeholder Properties Ltd
+Tenant: The Tenant
+
+1. RENT. The Tenant shall pay rent of $2,025 monthly.
+2. DEPOSIT. The Tenant shall pay a security deposit of $2,025 at signing.
+3. LATE PAYMENT. If rent remains unpaid five (5) days after the due date, a late charge of $125 applies.
+4. CHARGES. No charges are payable in addition to rent.
+5. TERM AND RENEWAL. This agreement renews automatically for a further term of the same length unless the Tenant gives written notice at least three (3) months before the end of the term.
+6. REPAIRS. The Landlord is responsible for structural repairs. The Tenant reports defects promptly.

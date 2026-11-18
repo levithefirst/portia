@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { cleanExtract } from '../lib/pipeline'
-import { formatMoney, monthlyRent, oneTimeFees, totalMonthlyFees } from '../lib/rules'
+import { formatMoney, monthlyRent, totalMonthlyFees, dueAtSigning } from '../lib/rules'
 import type { LeaseExtract, MandatoryFee, OtherMoneyTerm, ScalarField, SourceLabel } from '../lib/types'
 import { SourceBadge } from './Badges'
 import { IconPlus, IconX } from './icons'
@@ -91,7 +91,6 @@ export function ExtractEditor(p: Props) {
 
   const rent = monthlyRent(x)
   const recurring = totalMonthlyFees(x)
-  const once = oneTimeFees(x)
   const payload = { playbookId: p.playbookId, approvedExtract: cleanExtract(x) }
 
   function updateFee(i: number, patch: Partial<MandatoryFee>) {
@@ -260,7 +259,7 @@ export function ExtractEditor(p: Props) {
             </div>
             <div className="flex justify-between gap-3 pt-2">
               <dt className="text-text-secondary">Due at signing (deposit + first month with required fees)</dt>
-              <dd className="font-mono" data-testid="due-at-signing">{rent ? formatMoney((x.depositAmount ?? 0) + once + rent + recurring, x.currency) : 'n/a'}</dd>
+              <dd className="font-mono" data-testid="due-at-signing">{rent ? formatMoney(dueAtSigning(x), x.currency) : 'n/a'}</dd>
             </div>
           </dl>
         </div>
@@ -280,7 +279,7 @@ export function ExtractEditor(p: Props) {
 
   const actionsBar = (
       <div className="no-print flex flex-wrap items-center gap-3">
-        <button type="button" className="btn btn-primary" onClick={p.onApprove} disabled={p.busy || approveBlocked} data-testid="approve" aria-describedby={p.thin ? 'thin-msg' : undefined}>
+        <button type="button" className="btn btn-primary" onClick={p.onApprove} disabled={p.busy || approveBlocked} data-testid="approve" aria-describedby={approveBlocked ? 'thin-msg' : undefined}>
           {p.busy ? 'Checking…' : p.cloudReviewAvailable ? 'Approve & check' : 'Approve & run playbook checks'}
         </button>
         <button type="button" className="btn" onClick={p.onBack} disabled={p.busy}>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Playbook } from '../lib/playbooks'
 import { findRule } from '../lib/playbooks'
 import { formatMoney, monthlyRent, sortFindings, totalMonthlyFees } from '../lib/rules'
@@ -7,6 +7,9 @@ import { SourceBadge, StatusPill, statusLabel } from './Badges'
 import { IconCopy, IconPrint } from './icons'
 import { LogoMark } from './Shell'
 import { verdictTimeText } from '../lib/judge'
+import type { ReceiptStep } from '../lib/receipt'
+import { Receipt } from './Receipt'
+import { mailtoHref, shareText } from '../lib/share'
 
 export interface CachedInfo {
   reason: string
@@ -45,6 +48,12 @@ interface Props {
   nanoMissing: boolean
   pinnedNote: string | null
   onDownloadFixture?: () => void
+  /** Privacy receipt rows for this run, and the lease text they are measured against. */
+  receipt: ReceiptStep[]
+  receiptLease: string
+  receiptFooter?: ReactNode
+  /** Browser online state; the offline "Run cloud review now" button is enabled only when true. */
+  online: boolean
 }
 
 const ALL: Status[] = ['RED', 'AMBER', 'GREEN']
@@ -61,6 +70,11 @@ function useElapsed(startedAt: number | null, running: boolean): number {
 }
 
 export function Results(p: Props) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  // Step change: move focus to the results heading so keyboard and screen reader users land on the result.
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
   const [show, setShow] = useState<Status[]>(['RED', 'AMBER', 'GREEN'])
   const [copied, setCopied] = useState<string | null>(null)
   const sorted = useMemo(() => sortFindings(p.findings), [p.findings])
@@ -153,7 +167,7 @@ export function Results(p: Props) {
               Checked against <span className="text-text">{p.playbook.id}</span>
               <span className="hidden sm:inline normal-case tracking-normal"> · {p.playbook.jurisdiction}</span>
             </p>
-            <h2 id="results-title" className="mt-1 font-serif text-[1.9rem] leading-tight font-medium tracking-tight sm:text-[2.3rem]">
+            <h2 id="results-title" ref={headingRef} tabIndex={-1} className="mt-1 font-serif text-[1.9rem] leading-tight font-medium tracking-tight sm:text-[2.3rem]">
               Clause map
             </h2>
           </div>
@@ -163,10 +177,17 @@ export function Results(p: Props) {
           </div>
         </div>
 
+        <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="results-announcer">
+          {!p.checking && p.checkSource
+            ? `Results ready: ${counts[0][1]} red, ${counts[1][1]} amber, ${counts[2][1]} green.${p.checkSource === 'IN_CLOUD' && !p.liveRetry?.swapped ? ' Cloud review added.' : ''}`
+            : ''}
+        </p>
         {preliminary ? (
-          <p className="mt-3 text-sm text-text-secondary" role="status" aria-live="polite" data-testid="preliminary">
+          <p id="prelim-label" className="mt-3 text-sm text-text-secondary" role="status" aria-live="polite" data-testid="preliminary">
             <span className="font-medium text-text">Preliminary: playbook rules in your browser.</span> Cloud review running{' '}
-            <span className="font-mono">{(elapsed / 1000).toFixed(1)}s</span>
+            <span className="font-mono" aria-hidden="true">
+              {(elapsed / 1000).toFixed(1)}s
+            </span>
           </p>
         ) : null}
 
@@ -184,7 +205,14 @@ export function Results(p: Props) {
           ) : null}
 
           <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Filter findings by status">
+            <div
+              className="grid grid-cols-3 gap-2"
+              role="group"
+              aria-label={preliminary ? 'Preliminary counts. Filter findings by status' : 'Filter findings by status'}
+              aria-busy={preliminary}
+              aria-describedby={preliminary ? 'prelim-label' : undefined}
+              data-testid="tiles"
+            >
               {counts.map(([s, n]) => {
                 const on = show.includes(s)
                 const tone = s === 'RED' ? 'text-red-text' : s === 'AMBER' ? 'text-amber-text' : 'text-green-text'
@@ -228,6 +256,8 @@ export function Results(p: Props) {
 
         {p.pinnedNote && <p className="mt-1.5 text-xs text-text-secondary">{p.pinnedNote}</p>}
 
+        <Receipt steps={p.receipt} leaseText={p.receiptLease} footer={p.receiptFooter} />
+
         <p className="mt-4 border-t border-border-subtle pt-3 text-[0.82rem] leading-relaxed text-text-secondary">
           <strong className="text-text">Not legal advice.</strong> Red means "likely worth pushing back on before signing", amber means "ask about this",
           green means "looks typical". Counts come from the curated static playbook rules, not from the law where you live.
@@ -258,6 +288,22 @@ export function Results(p: Props) {
           )}
         </div>
       )}
+      {p.checkSource === 'RULES_ONLY' && (
+        <div className="rounded-[14px] border border-border bg-surface p-4 text-sm" role="status" data-testid="offline-panel">
+          <p className="font-semibold">Checked by the playbook rules in this browser. No model was called.</p>
+          <p className="mt-1 text-text-secondary">Cloud review will add commentary when you are back online.</p>
+          <button
+            type="button"
+            className="btn mt-3 text-sm"
+            onClick={p.onRetryCheck}
+            disabled={!p.online || !p.cloudReviewAvailable}
+            data-testid="run-cloud-now"
+          >
+            Run cloud review now
+          </button>
+          {!p.online && <span className="hint ml-3">Available when you are back online.</span>}
+        </div>
+      )}
       {p.liveRetry?.swapped && !p.cached && (
         <p className="rounded-lg border border-green-solid bg-green-bg px-4 py-2.5 text-sm text-green-text" role="status" data-testid="live-swapped">
           Live result arrived and replaced the cached sample result.
@@ -284,7 +330,7 @@ export function Results(p: Props) {
           </button>
         </div>
       )}
-      {!p.cloudReviewAvailable && <p className="hint">Cloud review is not configured in this build, so only in-browser playbook rules are shown.</p>}
+      {!p.cloudReviewAvailable && p.checkSource !== 'RULES_ONLY' && <p className="hint">Cloud review is not configured in this build, so only in-browser playbook rules are shown.</p>}
 
       <ol className="space-y-3" aria-label="Findings" data-testid="findings">
         {visible.map((f, i) => (
@@ -316,9 +362,21 @@ export function Results(p: Props) {
       <div className="paper p-5 sm:p-6" data-testid="questions">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-serif text-xl font-medium">Questions for the landlord</h2>
-          <button type="button" className="no-print btn btn-primary text-sm" onClick={() => window.print()}>
-            <IconPrint /> Print or save as PDF
-          </button>
+          <div className="no-print flex flex-wrap gap-2">
+            {questions.length > 0 && (
+              <>
+                <button type="button" className="btn text-sm" onClick={() => copy(shareText(questions, p.extract), 'all-questions')} data-testid="copy-all">
+                  <IconCopy /> {copied === 'all-questions' ? 'Copied' : 'Copy all'}
+                </button>
+                <a className="btn text-sm no-underline" href={mailtoHref(questions, p.extract)} data-testid="email-questions">
+                  Email these questions
+                </a>
+              </>
+            )}
+            <button type="button" className="btn btn-primary text-sm" onClick={() => window.print()}>
+              <IconPrint /> Print or save as PDF
+            </button>
+          </div>
         </div>
         {questions.length ? (
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm">
@@ -337,14 +395,6 @@ export function Results(p: Props) {
         </p>
       </div>
 
-      {p.checkPrompt && (
-        <details className="no-print paper p-5">
-          <summary className="cursor-pointer text-sm font-semibold">View the exact text sent to the check model</summary>
-          <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-border-subtle bg-bg p-3 font-mono text-[0.72rem]">
-            {p.checkPrompt}
-          </pre>
-        </details>
-      )}
 
       <div className="no-print flex flex-wrap gap-3">
         <button type="button" className="btn" onClick={p.onEdit}>

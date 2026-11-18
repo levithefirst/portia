@@ -1,0 +1,13 @@
+SYNTHETIC TEST LEASE dev-01. Not a real agreement. All names and places are invented.
+
+SCHEDULE OF TERMS
+
+Property ............ 25, 960 Thistle Court, Brookhaven Falls
+Landlord ............ Placeholder Properties Ltd
+Rent ................ $1,075 monthly
+Deposit ............. $2,150
+Late payment ........ No late charge applies to overdue rent.
+Renewal ............. This agreement renews automatically for a further term of the same length unless the Tenant gives written notice at least 90 days before the end of the term.
+
+Additional charges. The following charges are mandatory and payable in addition to rent:
+   - Valet Trash Service: $35 per month

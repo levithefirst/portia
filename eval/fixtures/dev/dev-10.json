@@ -1,0 +1,17 @@
+{
+  "synthetic": true,
+  "id": "dev-10",
+  "split": "dev",
+  "jurisdiction": "US",
+  "truth": {
+    "currency": "USD",
+    "rentAmount": 2025,
+    "rentPeriod": "monthly",
+    "depositAmount": 2025,
+    "noticePeriodDays": 90,
+    "autoRenewal": "yes",
+    "mandatoryFees": [],
+    "lateFeeAmount": 125,
+    "lateFeeGraceDays": 5
+  }
+}

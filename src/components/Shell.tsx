@@ -2,9 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { applyTheme, getTheme, type ThemePref } from '../lib/storage'
 import { IconMonitor, IconMoon, IconSun } from './icons'
 
-export type Route = 'home' | 'check' | 'privacy'
+export type Route = 'home' | 'check' | 'privacy' | 'eval'
 
-const PATHS: Record<Route, string> = { home: '/', check: '/app', privacy: '/privacy' }
+const PATHS: Record<Route, string> = { home: '/', check: '/app', privacy: '/privacy', eval: '/eval' }
 
 export function navigate(to: Route) {
   const path = PATHS[to]
@@ -17,6 +17,7 @@ export function navigate(to: Route) {
 export function routeFromPath(): Route {
   const p = location.pathname
   if (p.startsWith('/privacy')) return 'privacy'
+  if (p.startsWith('/eval')) return 'eval'
   if (p.startsWith('/app') || p.startsWith('/check')) return 'check'
   const q = new URLSearchParams(location.search)
   if (q.get('judge') === '1' || (q.has('judge') && q.get('judge') !== '0')) return 'check'
@@ -153,6 +154,15 @@ export function Footer({ children, flush = false }: { children?: ReactNode; flus
             }}
           >
             How your data flows
+          </a>
+          <a
+            href="/eval"
+            onClick={(e) => {
+              e.preventDefault()
+              navigate('eval')
+            }}
+          >
+            Accuracy eval
           </a>
           <span>Built with Firebase AI Logic hybrid inference.</span>
           <span>Apache-2.0</span>

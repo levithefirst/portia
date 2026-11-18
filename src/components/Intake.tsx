@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { PLAYBOOKS } from '../lib/playbooks'
 import { HUGE_PASTE_CHARS, MAX_IMAGES_PER_EXTRACT, ON_DEVICE_TOKEN_BUDGET, estimateTokens } from '../lib/prompts'
 import { MAX_QUEUED_PAGES, sortFiles } from '../lib/intake'
+import { readPdf } from '../lib/pdf'
 import type { PageImage } from '../lib/types'
 import { IconArrowDown, IconArrowUp, IconUpload, IconX } from './icons'
 
@@ -38,23 +39,51 @@ export function Intake(p: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [drag, setDrag] = useState(false)
 
-  function addFiles(list: FileList | File[]) {
-    const { accepted, rejected } = sortFiles(Array.from(list))
-    const room = MAX_QUEUED_PAGES - p.pages.length
+  const [pdfStatus, setPdfStatus] = useState<{ busy: boolean; msg: string } | null>(null)
+
+  function fillBatch(next: PageImage[]) {
+    // Auto-select the first batch (up to 3 pages) when nothing is selected yet.
+    const fill = [...p.batch]
+    for (const pg of next) if (fill.length < MAX_IMAGES_PER_EXTRACT && !fill.includes(pg.id)) fill.push(pg.id)
+    p.onBatch(fill)
+  }
+
+  async function addFiles(list: FileList | File[]) {
+    const { accepted, pdfs, rejected } = sortFiles(Array.from(list))
+    let pages = p.pages
+    const room = MAX_QUEUED_PAGES - pages.length
     const take = accepted.slice(0, Math.max(0, room))
     const extra = accepted.length - take.length
     const msgs = rejected.map((r) => `${r.name}: ${r.reason}`)
     if (extra > 0) msgs.push(`Only ${MAX_QUEUED_PAGES} pages can be queued at once. ${extra} file${extra > 1 ? 's were' : ' was'} skipped.`)
     p.onRejections(msgs)
-    if (!take.length) return
-    const added = take.map(toPage)
-    const next = [...p.pages, ...added]
-    p.onPages(next)
-    // Auto-select the first batch (up to 3 pages) when nothing is selected yet.
-    const sel = p.batch.length ? p.batch : []
-    const fill = [...sel]
-    for (const pg of next) if (fill.length < MAX_IMAGES_PER_EXTRACT && !fill.includes(pg.id)) fill.push(pg.id)
-    p.onBatch(fill)
+    if (take.length) {
+      pages = [...pages, ...take.map(toPage)]
+      p.onPages(pages)
+      fillBatch(pages)
+    }
+    // PDFs are parsed here in the browser. No AI and no network: text fills the
+    // textarea; scanned pages become PNG images that go through the normal gate.
+    for (const pdf of pdfs) {
+      setPdfStatus({ busy: true, msg: `Reading ${pdf.name} in this browser...` })
+      try {
+        const r = await readPdf(pdf, MAX_QUEUED_PAGES - pages.length)
+        if (r.kind === 'text') {
+          p.onLeaseText(r.text)
+          setPdfStatus({ busy: false, msg: 'Text read from your PDF in this browser. Nothing was uploaded.' })
+        } else {
+          pages = [...pages, ...r.images.map(toPage)]
+          p.onPages(pages)
+          fillBatch(pages)
+          const skipped = r.skippedPages ? ` ${r.skippedPages} page${r.skippedPages > 1 ? 's' : ''} did not fit in the queue; split the PDF.` : ''
+          setPdfStatus({ busy: false, msg: `Scanned PDF: pages were turned into images in this browser.${skipped}` })
+        }
+      } catch (e) {
+        setPdfStatus(null)
+        msgs.push(`${pdf.name}: ${e instanceof Error ? e.message : 'Could not read this PDF.'}`)
+        p.onRejections([...msgs])
+      }
+    }
   }
 
   function move(i: number, d: -1 | 1) {
@@ -163,20 +192,25 @@ export function Intake(p: Props) {
             <input
               ref={inputRef}
               type="file"
-              accept="image/jpeg,image/png,.pdf"
+              accept="image/jpeg,image/png,application/pdf,.pdf"
               multiple
               className="sr-only"
               tabIndex={-1}
-              aria-label="Choose page images"
+              aria-label="Choose a PDF or page images"
               data-testid="file-input"
               onChange={(e) => {
                 if (e.target.files) addFiles(e.target.files)
                 e.target.value = ''
               }}
             />
-            <p className="hint mt-2">Up to {MAX_IMAGES_PER_EXTRACT} pages per extract. PDFs are not accepted.</p>
+            <p className="hint mt-2">PDFs are read in this browser. Up to {MAX_IMAGES_PER_EXTRACT} page images per extract.</p>
           </div>
 
+          {pdfStatus && (
+            <p className={`mt-2 rounded-lg border border-border-subtle bg-bg px-3 py-2 text-sm ${pdfStatus.busy ? 'text-text-secondary' : ''}`} role="status" data-testid="pdf-status">
+              {pdfStatus.msg}
+            </p>
+          )}
           {p.rejections.length > 0 && (
             <ul className="mt-2 space-y-1 rounded-lg border border-red-solid bg-red-bg px-3 py-2 text-sm text-red-text" role="alert" data-testid="rejections">
               {p.rejections.map((r) => (
