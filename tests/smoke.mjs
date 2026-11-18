@@ -555,6 +555,22 @@ try {
     await page.close()
   }
 
+  // ---------- L) Item 9a/9b: OG tags, manifest, service worker files ----------
+  {
+    const page = await browser.newPage()
+    const html = await (await page.request.get('http://localhost:4317/')).text()
+    ok(['og:title', 'og:description', 'og:image', 'og:url', 'twitter:card', 'twitter:image'].every((t) => html.includes(t)) && html.includes('https://askportia.vercel.app/og.png') && html.includes('summary_large_image'), 'L: OG and Twitter meta tags in the built index.html')
+    const man = await page.request.get('http://localhost:4317/manifest.webmanifest')
+    let manifest = null
+    try { manifest = JSON.parse(await man.text()) } catch {}
+    ok(man.ok() && manifest?.start_url === '/app' && manifest?.display === 'standalone' && manifest?.icons?.length >= 2, 'L: /manifest.webmanifest returns the JSON manifest')
+    const sw = await page.request.get('http://localhost:4317/sw.js')
+    ok(sw.ok() && (await sw.text()).includes('portia-shell'), 'L: /sw.js is served as a file, not the SPA')
+    const og = await page.request.get('http://localhost:4317/og.png')
+    ok(og.ok() && og.headers()['content-type'].includes('image/png'), 'L: /og.png is served')
+    await page.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()
