@@ -76,7 +76,7 @@ export function extractStep(a: { ranOn: SourceLabel; raw?: string; ms: number; p
   const cloud = a.ranOn === 'IN_CLOUD'
   return {
     step: 'extract',
-    requestedMode: a.ranOn === 'FIXTURE' ? 'none' : 'PREFER_ON_DEVICE',
+    requestedMode: a.ranOn === 'FIXTURE' || a.ranOn === 'CACHED' ? 'none' : 'PREFER_ON_DEVICE',
     ranOn: a.ranOn,
     sdkInferenceSource: a.raw,
     ms: a.ms,
@@ -124,6 +124,13 @@ export function receiptHeadline(steps: ReceiptStep[], leaseText: string): Headli
     const { chars, imageCount } = extract.sentToCloud
     const parts = [chars ? `${chars.toLocaleString('en')} characters` : null, imageCount ? `${imageCount} image${imageCount > 1 ? 's' : ''}` : null].filter(Boolean)
     return { text: `Lease text sent to cloud Gemini with your consent: ${parts.join(', ')}.`, zero: false, phrases: [] }
+  }
+  if (extract && extract.ranOn === 'CACHED') {
+    return {
+      text: 'No lease text of yours was sent in this run. This is the recorded result for the bundled sample lease; the live attempt did not return a result.',
+      zero: false,
+      phrases: [],
+    }
   }
   const local = !!extract && (extract.ranOn === 'ON_DEVICE' || extract.ranOn === 'FIXTURE')
   const payload = check?.payload ?? ''

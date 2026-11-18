@@ -592,6 +592,69 @@ try {
     await page.close()
   }
 
+  // ---------- N) Addendum 5: Judge Mode error fallback (App Check 401) ----------
+  for (const [label, query] of [
+    ['extract rejected', 'fakeExtract=appcheck&fakeCheck=ok'],
+    ['extract and check rejected', 'fakeExtract=appcheck&fakeCheck=appcheck'],
+    ['check rejected', 'fakeExtract=ok&fakeCheck=appcheck'],
+  ]) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto(`http://localhost:4318/?judge=1&${query}`)
+    const t0 = Date.now()
+    await page.getByTestId('run-sample').click()
+    await page.getByTestId('cached-banner').waitFor({ timeout: 4000 })
+    const ms = Date.now() - t0
+    const banner = await page.getByTestId('cached-banner').innerText()
+    ok(ms <= 2000, `N(${label}): recorded result within 2 s of the click (${ms} ms)`)
+    ok(JSON.stringify(await counts(page)) === '[3,6,0]' && (await page.getByTestId('results-true-monthly').innerText()).includes('$1,961.95'), `N(${label}): recorded 3/6/0 and $1,961.95`)
+    ok(banner.includes('Cached sample result (live check unavailable)') && banner.includes('Live check could not reach Gemini from this browser, so this is the recorded result for the sample lease. Try again or paste your own lease.'), `N(${label}): recorded label and calm note`)
+    const cb = await page.getByTestId('badge-Check').getAttribute('data-source')
+    ok(cb === 'CACHED', `N(${label}): check badge is the recorded result, never ON_DEVICE or IN_CLOUD (${cb})`)
+    const eb = await page.getByTestId('badge-Extract').getAttribute('data-source')
+    ok(label === 'check rejected' ? eb === 'IN_CLOUD' : eb === 'CACHED', `N(${label}): extract badge is truthful (${eb})`)
+    const body = await page.evaluate(() => document.body.innerText)
+    ok(!/debug token/i.test(body) && !/Firebase App Check token is invalid/i.test(body), `N(${label}): no debug-token text or raw SDK error on the page`)
+    if (label !== 'check rejected') {
+      const head = await page.getByTestId('receipt-headline').innerText()
+      ok(head.startsWith('No lease text of yours was sent in this run.') && (await page.getByTestId('receipt-row-extract').getAttribute('data-kind')) === 'nothing', `N(${label}): receipt says no lease text was sent ("${head.slice(0, 60)}...")`)
+      ok((await page.locator('[data-testid^="receipt-row-"][data-ran="ON_DEVICE"], [data-testid^="receipt-row-"][data-ran="IN_CLOUD"][data-testid="receipt-row-extract"]').count()) === 0, `N(${label}): receipt never shows the extract as ON_DEVICE or IN_CLOUD`)
+    }
+    await axe(page, `judge fallback (${label})`)
+    const before = await page.evaluate(() => window.__portiaCalls.filter((c) => c.kind === 'extract').length + window.__portiaCalls.filter((c) => c.kind === 'check').length)
+    await page.getByTestId('retry-live').click()
+    await page.waitForFunction((n) => window.__portiaCalls.filter((c) => c.kind === 'extract').length + window.__portiaCalls.filter((c) => c.kind === 'check').length > n, before, { timeout: 5000 })
+    ok(true, `N(${label}): Retry calls the live path again`)
+    await page.close()
+  }
+  {
+    // Judge Mode, your own lease: never substituted, plain error with Retry, no debug token text.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/?judge=1&fakeExtract=appcheck')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.locator('#lease-text').press('End')
+    await page.keyboard.type(' Extra clause.')
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('extract-error').waitFor({ timeout: 4000 })
+    const t = await page.getByTestId('extract-error').innerText()
+    ok(!/debug token/i.test(t) && t.includes('Retry') && (await page.getByTestId('cached-banner').count()) === 0 && (await page.getByTestId('pin-note').count()) === 0, 'N(own lease): plain error with Retry, no recorded fallback, no debug token text')
+    await page.close()
+  }
+  {
+    // Non-judge flow: plain-language error with Retry.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/app?fakeExtract=appcheck')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('extract-error').waitFor({ timeout: 4000 })
+    const t = await page.getByTestId('extract-error').innerText()
+    ok(t.includes('could not reach the cloud model') && !/debug token/i.test(t) && (await page.getByTestId('cached-banner').count()) === 0, 'N(non-judge): plain-language error with Retry, nothing recorded shown')
+    await page.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()

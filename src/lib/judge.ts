@@ -14,6 +14,9 @@ import type { DisplayFinding, LeaseExtract, SourceLabel } from './types'
 export const JUDGE_TIMEOUT_MS = 8000
 export const JUDGE_RETRY_DELAYS_MS = [3000, 6000, 12000, 24000]
 export const CACHED_LABEL = 'Cached sample result (live check unavailable)'
+/** Shown when any live step fails in Judge Mode for the bundled sample. Calm, no technical detail. */
+export const LIVE_FAILED_NOTE =
+  'Live check could not reach Gemini from this browser, so this is the recorded result for the sample lease. Try again or paste your own lease.'
 
 const KEY = 'portia.judge'
 

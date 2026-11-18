@@ -12,7 +12,7 @@ const RAN_ON: Record<string, string> = {
   ON_DEVICE: 'This device (Gemini Nano)',
   IN_CLOUD: 'Cloud Gemini',
   FIXTURE: 'Bundled sample, no model',
-  CACHED: 'Cached sample result, no model',
+  CACHED: 'Recorded sample result (not live), no model',
   RULES_ONLY: 'This browser, no model',
 }
 

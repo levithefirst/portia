@@ -20,14 +20,14 @@ declare global {
   }
 }
 
-/** ?fakeCheck=fail -> every check throws a 429. slow -> first check takes 9 s. offline -> network TypeError. */
+/** ?fakeCheck=appcheck -> every check throws the App Check 401. fail -> every check throws a 429. slow -> first check takes 9 s. offline -> network TypeError. */
 function checkMode(): string {
   return new URLSearchParams(location.search).get('fakeCheck') ?? 'ok'
 }
 let checkCount = 0
 
 /**
- * ?fakeExtract=thin -> every extract is nearly empty. thinonce -> first extract thin, then full.
+ * ?fakeExtract=appcheck -> every extract throws the App Check 401. thin -> every extract is nearly empty. thinonce -> first extract thin, then full.
  * wild -> full but with drifting values (notice 270 days, missing fees), like a flaky live run.
  */
 function extractMode(): string {
@@ -43,6 +43,9 @@ let extractCount = 0
 function deviceReady(): boolean {
   return new URLSearchParams(location.search).get('fakeDevice') === 'available'
 }
+/** Same text the Firebase AI Logic SDK throws when App Check rejects generateContent. */
+const APP_CHECK_401 =
+  'Error fetching from https://firebasevertexai.googleapis.com/v1beta/projects/p/locations/global/publishers/google/models/gemini-3.5-flash-lite:generateContent: [401 ] Firebase App Check token is invalid.'
 const extractSource = () => (deviceReady() ? ({ source: 'ON_DEVICE', rawSource: 'on_device' } as const) : ({ source: 'IN_CLOUD', rawSource: 'in_cloud' } as const))
 
 function record(c: Call) {
@@ -68,6 +71,7 @@ export const fakeEngine: AiEngine = {
     await new Promise((r) => setTimeout(r, 150))
     const mode = extractMode()
     extractCount++
+    if (mode === 'appcheck') throw new Error(APP_CHECK_401)
     if (mode === 'thin' || (mode === 'thinonce' && extractCount === 1)) {
       return { text: JSON.stringify({ rentAmount: 1850, currency: 'USD' }), ...extractSource() }
     }
@@ -81,6 +85,10 @@ export const fakeEngine: AiEngine = {
     record({ kind: 'check', prompt, imageCount: 0 })
     const mode = checkMode()
     checkCount++
+    if (mode === 'appcheck') {
+      await new Promise((r) => setTimeout(r, 100))
+      throw new Error(APP_CHECK_401)
+    }
     if (mode === 'offline') {
       await new Promise((r) => setTimeout(r, 100))
       throw new TypeError('Failed to fetch')

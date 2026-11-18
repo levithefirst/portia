@@ -35,6 +35,7 @@ import {
   isRecordMode,
   JUDGE_RETRY_DELAYS_MS,
   isThinExtract,
+  LIVE_FAILED_NOTE,
   matchSample,
   SAMPLE_EXTRACT,
   sleep,
@@ -59,7 +60,7 @@ import sampleExtract from './fixtures/sample-extract.json'
 type Step = 'intake' | 'review' | 'results'
 
 interface PinInfo {
-  kind: 'pinned' | 'fallback'
+  kind: 'pinned' | 'fallback' | 'recorded'
   matched: number
   total: number
   differs: string[]
@@ -74,6 +75,8 @@ interface ExtractOverride {
 }
 
 interface CheckCtx {
+  /** Judge Mode: the live extract already failed, so go straight to the recorded verdict (live retries continue). */
+  forceRecorded?: boolean
   sample: boolean
   original: string | null
   playbook: Playbook
@@ -83,7 +86,11 @@ interface CheckCtx {
 function friendlyError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e)
   if (/app.?check|attestation|recaptcha/i.test(msg)) {
-    return `Firebase App Check rejected the request. If this is a local or preview build, register the debug token from the browser console in the Firebase console. (${msg})`
+    // The debug-token hint is for developers running a local dev build only.
+    if (import.meta.env.DEV) {
+      return `Firebase App Check rejected the request. Register the debug token printed in the browser console under Security > App Check > Apps > Manage debug tokens. (${msg})`
+    }
+    return 'Portia could not reach the cloud model from this browser right now. Please try again in a moment.'
   }
   if (/429|quota|resource.?exhausted|rate/i.test(msg)) return `The model is rate limited right now. Wait a moment and retry. (${msg})`
   if (/503|unavailable|overloaded/i.test(msg)) return `The model is temporarily unavailable. Retry in a few seconds. (${msg})`
@@ -153,6 +160,8 @@ export default function App() {
   const [checkMs, setCheckMs] = useState<number | null>(null)
   const [lastRaw, setLastRaw] = useState<string | null>(null)
   const checkRun = useRef(0)
+  /** True when the last Judge Mode extract fell back to the recorded sample. */
+  const extractRecorded = useRef(false)
   /** Judge Mode: why the review shows the pinned sample values, and how the live extract compared. */
   const [pin, setPin] = useState<PinInfo | null>(null)
   const [oneClickMs, setOneClickMs] = useState<number | null>(null)
@@ -249,6 +258,7 @@ export default function App() {
     if (!engine) return null
     setExtractError(null)
     setNotice(null)
+    extractRecorded.current = false
     const text = override ? override.text : leaseText
     const pageList = override ? override.pages : pages
     const batchIds = override ? override.batchIds : batch
@@ -257,9 +267,34 @@ export default function App() {
       setExtractError({ message: 'Paste the lease text or add at least one page photo first.' })
       return null
     }
+    const sampleNow = override ? override.sample : batchMode ? extractIsSample && isSampleDoc : isSampleDoc
+    const tStart = performance.now()
+    /**
+     * Judge Mode + bundled sample only: any failure of the live extract shows the
+     * recorded sample extract at once, labelled as recorded (never ON_DEVICE or
+     * IN_CLOUD). Your own documents never get fixture values.
+     */
+    const recordedFallback = (): { extract: LeaseExtract; sample: boolean } => {
+      const next = structuredClone(SAMPLE_EXTRACT)
+      extractRecorded.current = true
+      setExtract(next)
+      setPin({ kind: 'recorded', matched: 0, total: 0, differs: [], retried: false })
+      setUnsure([])
+      setExtractMs(performance.now() - tStart)
+      setExtractIsSample(true)
+      setOriginalExtract(JSON.stringify(cleanExtract(next)))
+      setExtractSource('CACHED')
+      setReceipt([extractStep({ ranOn: 'CACHED', ms: performance.now() - tStart, prompt: '', leaseText: '', images: [] })])
+      setReceiptLease('')
+      setShowConsent(false)
+      setBatchMode(false)
+      setStep('review')
+      return { extract: next, sample: true }
+    }
     // Offline without Gemini Nano: nothing can read a new lease. Do not offer cloud consent.
     if (!isOnline() && avail !== 'available') {
       setShowConsent(false)
+      if (judge && sampleNow && !batchMode) return recordedFallback()
       setExtractError({ message: OFFLINE_NO_NANO })
       return null
     }
@@ -277,7 +312,6 @@ export default function App() {
     try {
       const images = await Promise.all(batchPages.map((p) => fileToGenerativePart(p.file)))
       let out = await runExtract(engine, { leaseText: text, images, cloudConsent: consent })
-      const sampleNow = override ? override.sample : batchMode ? extractIsSample && isSampleDoc : isSampleDoc
       let next = batchMode && extract ? mergeExtracts(extract, out.extract) : out.extract
       let pinInfo: PinInfo | null = null
       if (judge && sampleNow && !batchMode) {
@@ -313,8 +347,12 @@ export default function App() {
       }
       return { extract: next, sample: sampleNow }
     } catch (e) {
-      if (e instanceof ConsentRequiredError) setShowConsent(true)
-      else if (e instanceof ParseError) setExtractError({ message: e.message, raw: e.raw })
+      if (e instanceof ConsentRequiredError) {
+        setShowConsent(true)
+        return null
+      }
+      if (judge && sampleNow && !batchMode) return recordedFallback()
+      if (e instanceof ParseError) setExtractError({ message: e.message, raw: e.raw })
       else setExtractError({ message: friendlyError(e) })
       return null
     } finally {
@@ -384,12 +422,12 @@ export default function App() {
       setLastRaw(out.raw)
       setCached(null)
     }
-    const live = runCheck(engine, approved, ctx.playbook, ctx.unsure)
+    const live = ctx.forceRecorded && useCache ? null : runCheck(engine, approved, ctx.playbook, ctx.unsure)
 
     // Cached fallback is allowed ONLY in Judge Mode and ONLY for the bundled sample lease.
     if (!useCache) {
       try {
-        const out = await live
+        const out = await live!
         if (current()) applyLive(out)
       } catch (e) {
         if (current()) {
@@ -406,13 +444,15 @@ export default function App() {
     }
 
     type Race = { kind: 'ok'; out: CheckOutput } | { kind: 'err'; e: unknown } | { kind: 'timeout' }
-    const r = await Promise.race<Race>([
-      live.then(
-        (out) => ({ kind: 'ok', out }) as Race,
-        (e) => ({ kind: 'err', e }) as Race,
-      ),
-      sleep(getConfig().judgeTimeoutMs).then(() => ({ kind: 'timeout' }) as Race),
-    ])
+    const r: Race = live
+      ? await Promise.race<Race>([
+          live.then(
+            (out) => ({ kind: 'ok', out }) as Race,
+            (e) => ({ kind: 'err', e }) as Race,
+          ),
+          sleep(getConfig().judgeTimeoutMs).then(() => ({ kind: 'timeout' }) as Race),
+        ])
+      : { kind: 'err', e: new Error('live extract failed') }
     if (!current()) return
     if (r.kind === 'ok') {
       applyLive(r.out)
@@ -427,7 +467,7 @@ export default function App() {
     setCheckSource('CACHED')
     setCheckMs(performance.now() - t0)
     setCached({
-      reason: r.kind === 'timeout' ? `The live check took longer than ${getConfig().judgeTimeoutMs / 1000} seconds.` : friendlyError(r.e),
+      reason: r.kind === 'timeout' ? `The live check took longer than ${getConfig().judgeTimeoutMs / 1000} seconds.` : LIVE_FAILED_NOTE,
       hasRecordedCloud: cv.hasRecordedCloud,
       recordedAt: cv.recordedAt,
       edited: ctx.original !== null && JSON.stringify(approved) !== ctx.original,
@@ -442,7 +482,7 @@ export default function App() {
       if (waits[i]) await sleep(waits[i])
       if (!current()) return
       try {
-        const out = await (i === 0 && r.kind === 'timeout' ? live : runCheck(engine, approved, ctx.playbook, ctx.unsure))
+        const out = await (i === 0 && r.kind === 'timeout' && live ? live : runCheck(engine, approved, ctx.playbook, ctx.unsure))
         if (!current()) return
         applyLive(out)
         setLiveRetry({ attempt: i + 1, total: waits.length, active: false, swapped: true })
@@ -523,6 +563,7 @@ export default function App() {
         return
       }
       await approve(res.extract, {
+        forceRecorded: extractRecorded.current,
         sample: res.sample,
         original: JSON.stringify(cleanExtract(res.extract)),
         playbook: getPlaybook('us-typical'),
@@ -624,7 +665,12 @@ export default function App() {
   }
 
   const pinNote = pin ? (
-    pin.kind === 'pinned' ? (
+    pin.kind === 'recorded' ? (
+      <>
+        <strong>Recorded sample extract (Judge Mode).</strong> The live extract did not return a result from this browser, so this
+        review shows the recorded values for the bundled sample lease, not a model result for this run.
+      </>
+    ) : pin.kind === 'pinned' ? (
       <>
         <strong>Bundled sample values (Judge Mode).</strong> The live extract ran and matched {pin.matched} of {pin.total} key
         fields of the bundled sample{pin.differs.length ? ` (differed on ${pin.differs.join(', ')})` : ''}
@@ -665,21 +711,23 @@ export default function App() {
         ) : (
           <div className="space-y-6">
             {judge && (
-              <details className="judge-bar no-print rounded-2xl border border-border-subtle bg-surface px-3.5 py-1.5 text-[0.8rem] sm:rounded-full sm:open:rounded-xl" data-testid="judge-banner">
-                <summary className="cursor-pointer select-none">
-                  <span className="font-mono text-[0.68rem] font-medium tracking-[0.08em] text-accent-text">JUDGE MODE</span>{' '}
-                  <span className="text-text-secondary">pre-warmed, timed, labelled sample fallback</span>{' '}
-                  <a href="/app?judge=0" className="ml-1">
-                    Turn off
-                  </a>
-                </summary>
-                <p className="mt-1.5 pb-1 text-text-secondary">
-                  Models are pre-warmed on landing and the loop is timed. For the bundled sample lease only: the review is pinned to
-                  the canonical sample values (labelled) so every run scores the same, and if the live cloud check fails or takes
-                  over {cfg.judgeTimeoutMs / 1000} s, a labelled cached result is shown while the live check keeps retrying. Your own
-                  documents are never substituted.
-                </p>
-              </details>
+              <div className="judge-bar no-print flex flex-wrap items-center gap-x-2 rounded-2xl border border-border-subtle bg-surface px-3.5 py-1.5 text-[0.8rem] sm:rounded-full" data-testid="judge-banner">
+                <details className="min-w-0 flex-1 sm:open:rounded-xl">
+                  <summary className="cursor-pointer select-none">
+                    <span className="font-mono text-[0.68rem] font-medium tracking-[0.08em] text-accent-text">JUDGE MODE</span>{' '}
+                    <span className="text-text-secondary">pre-warmed, timed, labelled sample fallback</span>
+                  </summary>
+                  <p className="mt-1.5 pb-1 text-text-secondary">
+                    Models are pre-warmed on landing and the loop is timed. For the bundled sample lease only: the review is pinned
+                    to the canonical sample values (labelled) so every run scores the same, and if the live cloud check or extract
+                    fails or takes over {cfg.judgeTimeoutMs / 1000} s, a labelled recorded result is shown while the live check keeps
+                    retrying. Your own documents are never substituted.
+                  </p>
+                </details>
+                <a href="/app?judge=0" className="shrink-0">
+                  Turn off
+                </a>
+              </div>
             )}
 
             {step === 'intake' && !batchMode && (
@@ -920,6 +968,11 @@ export default function App() {
                 checkPrompt={checkPrompt}
                 checking={checking}
                 onRetryCheck={() => {
+                  // The extract itself fell back: run the whole live path again from the sample lease.
+                  if (pin?.kind === 'recorded') {
+                    void runSampleOneClick()
+                    return
+                  }
                   const approved = cleanExtract(extract)
                   void runCloudCheck(approved, runPlaybook(playbook, approved), {
                     sample: extractIsSample,
@@ -942,7 +995,9 @@ export default function App() {
                   pin
                     ? pin.kind === 'pinned'
                       ? 'Judge Mode: extract values are pinned to the bundled sample so every run scores the same.'
-                      : 'Fallback: the live extract was incomplete, so these results use the bundled sample extract.'
+                      : pin.kind === 'recorded'
+                        ? 'Recorded sample extract: the live extract did not return a result, so these results use the recorded values for the bundled sample.'
+                        : 'Fallback: the live extract was incomplete, so these results use the bundled sample extract.'
                     : null
                 }
                 onDownloadFixture={
