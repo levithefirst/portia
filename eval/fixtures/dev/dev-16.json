@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "id": "dev-16",
+  "split": "dev",
+  "jurisdiction": "US",
+  "truth": {
+    "currency": "USD",
+    "rentAmount": 2075,
+    "rentPeriod": "monthly",
+    "depositAmount": 5187.5,
+    "noticePeriodDays": 60,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Utility Billing Administration Fee",
+        "amount": 9.95,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Community Amenity Fee",
+        "amount": 25,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Valet Trash Service",
+        "amount": 15,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Administrative Fee",
+        "amount": 200,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Technology Package",
+        "amount": 55,
+        "frequency": "monthly"
+      }
+    ],
+    "lateFeeAmount": 105,
+    "lateFeeGraceDays": 0
+  }
+}

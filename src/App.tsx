@@ -8,6 +8,7 @@ import { Results } from './components/Results'
 import { Footer, Header, routeFromPath, type Route } from './components/Shell'
 import { Hero } from './components/Hero'
 import { Landing } from './components/Landing'
+import { Eval } from './components/Eval'
 import type { AiEngine } from './lib/engine'
 import { missingEnv } from './lib/firebase'
 import { loadEngine } from './lib/getEngine'
@@ -646,6 +647,8 @@ export default function App() {
           <Landing avail={avail} />
         ) : route === 'privacy' ? (
           <Privacy />
+        ) : route === 'eval' ? (
+          <Eval engine={engine} avail={avail} />
         ) : (
           <div className="space-y-6">
             {judge && (

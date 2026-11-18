@@ -528,6 +528,23 @@ try {
     await page.close()
   }
 
+  // ---------- J) Item 7: eval page ----------
+  {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4317/eval')
+    ok((await page.getByTestId('eval-empty').innerText()) === 'No eval run recorded yet.' && (await page.getByTestId('eval-summary').count()) === 0, 'J: /eval shows the empty state and no numbers')
+    await axe(page, 'eval')
+    await page.goto('http://localhost:4318/eval?run=1&limit=1')
+    await page.getByTestId('eval-runner').waitFor()
+    ok(await page.getByTestId('eval-start').isDisabled(), 'J: runner Start is disabled until the synthetic-data consent is ticked (no Nano)')
+    await page.getByTestId('eval-consent').check()
+    await page.getByTestId('eval-start').click()
+    await page.getByTestId('eval-download').waitFor({ timeout: 10000 })
+    const row = await page.getByTestId('eval-rows').innerText()
+    ok(/^dev-01 IN_CLOUD \d+ ms, rules \d+\/\d+\/\d+/.test(row), `J: runner records ranOn from the engine and the rule counts ("${row}")`)
+    await page.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()

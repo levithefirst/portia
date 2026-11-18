@@ -1,0 +1,17 @@
+SYNTHETIC TEST LEASE dev-19. Not a real agreement. All names and places are invented.
+
+RESIDENTIAL LEASE
+
+Premises: 1C, 328 Thistle Court, Brookhaven Falls
+Landlord: Sample Holdings LLC
+Tenant: Tenant A
+
+1. RENT. The Tenant shall pay rent of $3,100 per month.
+2. DEPOSIT. The Tenant shall pay a security deposit of $6,200 at signing.
+3. LATE PAYMENT. If rent remains unpaid ten (10) days after the due date, a late charge of $115 applies.
+4. CHARGES. The following charges are mandatory and payable in addition to rent:
+   - Pest Control Fee: $15 per month
+   - Lease Preparation Fee: $55 once, at signing
+   - Administrative Fee: $250 once, at signing
+5. TERM AND RENEWAL. This agreement ends on the last day of the term and does not renew automatically. The Tenant must give two (2) months written notice before leaving.
+6. REPAIRS. The Landlord is responsible for structural repairs. The Tenant reports defects promptly.

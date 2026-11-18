@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "id": "dev-19",
+  "split": "dev",
+  "jurisdiction": "US",
+  "truth": {
+    "currency": "USD",
+    "rentAmount": 3100,
+    "rentPeriod": "monthly",
+    "depositAmount": 6200,
+    "noticePeriodDays": 60,
+    "autoRenewal": "no",
+    "mandatoryFees": [
+      {
+        "name": "Pest Control Fee",
+        "amount": 15,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Lease Preparation Fee",
+        "amount": 55,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Administrative Fee",
+        "amount": 250,
+        "frequency": "one-time"
+      }
+    ],
+    "lateFeeAmount": 115,
+    "lateFeeGraceDays": 10
+  }
+}

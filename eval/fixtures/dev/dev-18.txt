@@ -1,0 +1,17 @@
+SYNTHETIC TEST LEASE dev-18. Not a real agreement. All names and places are invented.
+
+TENANCY AGREEMENT
+
+Premises: 9, 667 Copperleaf Drive, Oduduwa View Estate
+Landlord: Sample Holdings LLC
+Tenant: Tenant B
+
+1. RENT. The Tenant shall pay rent of N3,750,000 per annum.
+2. DEPOSIT. The Tenant shall pay a caution deposit of N200,000 at signing.
+3. LATE PAYMENT. If rent remains unpaid seven (7) days after the due date, a late charge of N45,000 applies.
+4. CHARGES. The following charges are mandatory and payable in addition to rent:
+   - Agency Fee: N375,000 once, at signing
+   - Legal Fee: N375,000 once, at signing
+   - Service Charge: N450,000 per year
+5. TERM AND RENEWAL. This agreement renews automatically for a further term of the same length unless the Tenant gives written notice at least 180 days before the end of the term.
+6. REPAIRS. The Landlord is responsible for structural repairs. The Tenant reports defects promptly.

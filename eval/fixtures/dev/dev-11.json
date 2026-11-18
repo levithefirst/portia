@@ -1,0 +1,15 @@
+{
+  "synthetic": true,
+  "id": "dev-11",
+  "split": "dev",
+  "jurisdiction": "England & Wales",
+  "truth": {
+    "currency": "GBP",
+    "rentAmount": 1750,
+    "rentPeriod": "monthly",
+    "depositAmount": 2019.23,
+    "noticePeriodDays": 30,
+    "autoRenewal": "no",
+    "mandatoryFees": []
+  }
+}

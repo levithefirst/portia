@@ -1,0 +1,36 @@
+{
+  "synthetic": true,
+  "id": "dev-09",
+  "split": "dev",
+  "jurisdiction": "Lagos",
+  "truth": {
+    "currency": "NGN",
+    "rentAmount": 2700000,
+    "rentPeriod": "yearly",
+    "depositAmount": 400000,
+    "noticePeriodDays": 180,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Development Levy",
+        "amount": 150000,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Legal Fee",
+        "amount": 270000,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Agency Fee",
+        "amount": 270000,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Service Charge",
+        "amount": 300000,
+        "frequency": "yearly"
+      }
+    ]
+  }
+}

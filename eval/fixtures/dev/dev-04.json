@@ -1,0 +1,38 @@
+{
+  "synthetic": true,
+  "id": "dev-04",
+  "split": "dev",
+  "jurisdiction": "US",
+  "truth": {
+    "currency": "USD",
+    "rentAmount": 1375,
+    "rentPeriod": "monthly",
+    "depositAmount": 2062.5,
+    "noticePeriodDays": 60,
+    "autoRenewal": "no",
+    "mandatoryFees": [
+      {
+        "name": "Lease Preparation Fee",
+        "amount": 135,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Utility Billing Administration Fee",
+        "amount": 9.95,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Package Locker Fee",
+        "amount": 20,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Administrative Fee",
+        "amount": 325,
+        "frequency": "one-time"
+      }
+    ],
+    "lateFeeAmount": 195,
+    "lateFeeGraceDays": 5
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "id": "dev-17",
+  "split": "dev",
+  "jurisdiction": "England & Wales",
+  "truth": {
+    "currency": "GBP",
+    "rentAmount": 2150,
+    "rentPeriod": "monthly",
+    "depositAmount": 2480.77,
+    "noticePeriodDays": 60,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Tenancy Administration Fee",
+        "amount": 150,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Referencing Fee",
+        "amount": 90,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Inventory Check Fee",
+        "amount": 200,
+        "frequency": "one-time"
+      }
+    ],
+    "lateFeeAmount": 30,
+    "lateFeeGraceDays": 14
+  }
+}

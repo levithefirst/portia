@@ -1,0 +1,17 @@
+{
+  "synthetic": true,
+  "id": "dev-20",
+  "split": "dev",
+  "jurisdiction": "England & Wales",
+  "truth": {
+    "currency": "GBP",
+    "rentAmount": 875,
+    "rentPeriod": "monthly",
+    "depositAmount": 1009.62,
+    "noticePeriodDays": 30,
+    "autoRenewal": "yes",
+    "mandatoryFees": [],
+    "lateFeeAmount": 30,
+    "lateFeeGraceDays": 14
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "synthetic": true,
+  "id": "dev-07",
+  "split": "dev",
+  "jurisdiction": "US",
+  "truth": {
+    "currency": "USD",
+    "rentAmount": 1350,
+    "rentPeriod": "monthly",
+    "depositAmount": 2700,
+    "noticePeriodDays": 90,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Administrative Fee",
+        "amount": 225,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Smart Home Fee",
+        "amount": 30,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Technology Package",
+        "amount": 35,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Package Locker Fee",
+        "amount": 10,
+        "frequency": "monthly"
+      },
+      {
+        "name": "Utility Billing Administration Fee",
+        "amount": 3.95,
+        "frequency": "monthly"
+      }
+    ],
+    "lateFeeAmount": 185,
+    "lateFeeGraceDays": 5
+  }
+}

@@ -11,7 +11,9 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:smoke": "node tests/smoke.mjs",
-    "fixtures:photos": "node scripts/make-fixture-photos.mjs"
+    "fixtures:photos": "node scripts/make-fixture-photos.mjs",
+    "eval:score": "node scripts/eval-score.mjs",
+    "eval:fixtures": "node scripts/make-eval-fixtures.mjs"
   },
   "dependencies": {
     "firebase": "13.3.0",
