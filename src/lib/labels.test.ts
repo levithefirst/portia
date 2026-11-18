@@ -3,6 +3,7 @@ import { RAW_SOURCE, sourceText } from './labels'
 import { isNetworkError } from './network'
 import type { SourceLabel } from './types'
 
+const EMDASH = String.fromCharCode(0x2014)
 const ALL: SourceLabel[] = ['ON_DEVICE', 'IN_CLOUD', 'FIXTURE', 'CACHED', 'RULES_ONLY']
 
 describe('source labels', () => {
@@ -21,7 +22,7 @@ describe('source labels', () => {
   })
 
   it('no label contains an em dash', () => {
-    for (const s of ALL) for (const step of ['Extract', 'Check'] as const) expect(sourceText(s, step, true)).not.toContain('—')
+    for (const s of ALL) for (const step of ['Extract', 'Check'] as const) expect(sourceText(s, step, true)).not.toContain(EMDASH)
   })
 })
 
