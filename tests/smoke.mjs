@@ -571,6 +571,24 @@ try {
     await page.close()
   }
 
+  // ---------- M) Item 9c: accessibility pass ----------
+  {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/app?fakeCheck=ok')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('approve').click()
+    await page.getByTestId('badge-Check').waitFor({ timeout: 10000 })
+    ok((await page.evaluate(() => document.activeElement?.id)) === 'results-title', 'M: focus lands on the results h2 after approve')
+    const said = await page.getByTestId('results-announcer').innerText()
+    ok(said === 'Results ready: 3 red, 6 amber, 0 green. Cloud review added.', `M: live region announces the final counts once ("${said}")`)
+    await page.goto('http://localhost:4318/app')
+    ok((await page.getByTestId('file-input').getAttribute('aria-label')) === 'Choose a PDF or page images', 'M: the PDF / image file input is labelled')
+    await page.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()

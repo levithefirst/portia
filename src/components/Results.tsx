@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Playbook } from '../lib/playbooks'
 import { findRule } from '../lib/playbooks'
 import { formatMoney, monthlyRent, sortFindings, totalMonthlyFees } from '../lib/rules'
@@ -70,6 +70,11 @@ function useElapsed(startedAt: number | null, running: boolean): number {
 }
 
 export function Results(p: Props) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  // Step change: move focus to the results heading so keyboard and screen reader users land on the result.
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
   const [show, setShow] = useState<Status[]>(['RED', 'AMBER', 'GREEN'])
   const [copied, setCopied] = useState<string | null>(null)
   const sorted = useMemo(() => sortFindings(p.findings), [p.findings])
@@ -162,7 +167,7 @@ export function Results(p: Props) {
               Checked against <span className="text-text">{p.playbook.id}</span>
               <span className="hidden sm:inline normal-case tracking-normal"> · {p.playbook.jurisdiction}</span>
             </p>
-            <h2 id="results-title" className="mt-1 font-serif text-[1.9rem] leading-tight font-medium tracking-tight sm:text-[2.3rem]">
+            <h2 id="results-title" ref={headingRef} tabIndex={-1} className="mt-1 font-serif text-[1.9rem] leading-tight font-medium tracking-tight sm:text-[2.3rem]">
               Clause map
             </h2>
           </div>
@@ -172,6 +177,11 @@ export function Results(p: Props) {
           </div>
         </div>
 
+        <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="results-announcer">
+          {!p.checking && p.checkSource
+            ? `Results ready: ${counts[0][1]} red, ${counts[1][1]} amber, ${counts[2][1]} green.${p.checkSource === 'IN_CLOUD' && !p.liveRetry?.swapped ? ' Cloud review added.' : ''}`
+            : ''}
+        </p>
         {preliminary ? (
           <p id="prelim-label" className="mt-3 text-sm text-text-secondary" role="status" aria-live="polite" data-testid="preliminary">
             <span className="font-medium text-text">Preliminary: playbook rules in your browser.</span> Cloud review running{' '}
