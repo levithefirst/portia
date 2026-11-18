@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Playbook } from '../lib/playbooks'
 import { findRule } from '../lib/playbooks'
 import { formatMoney, monthlyRent, sortFindings, totalMonthlyFees } from '../lib/rules'
@@ -7,6 +7,8 @@ import { SourceBadge, StatusPill, statusLabel } from './Badges'
 import { IconCopy, IconPrint } from './icons'
 import { LogoMark } from './Shell'
 import { verdictTimeText } from '../lib/judge'
+import type { ReceiptStep } from '../lib/receipt'
+import { Receipt } from './Receipt'
 
 export interface CachedInfo {
   reason: string
@@ -45,6 +47,10 @@ interface Props {
   nanoMissing: boolean
   pinnedNote: string | null
   onDownloadFixture?: () => void
+  /** Privacy receipt rows for this run, and the lease text they are measured against. */
+  receipt: ReceiptStep[]
+  receiptLease: string
+  receiptFooter?: ReactNode
   /** Browser online state; the offline "Run cloud review now" button is enabled only when true. */
   online: boolean
 }
@@ -230,6 +236,8 @@ export function Results(p: Props) {
 
         {p.pinnedNote && <p className="mt-1.5 text-xs text-text-secondary">{p.pinnedNote}</p>}
 
+        <Receipt steps={p.receipt} leaseText={p.receiptLease} footer={p.receiptFooter} />
+
         <p className="mt-4 border-t border-border-subtle pt-3 text-[0.82rem] leading-relaxed text-text-secondary">
           <strong className="text-text">Not legal advice.</strong> Red means "likely worth pushing back on before signing", amber means "ask about this",
           green means "looks typical". Counts come from the curated static playbook rules, not from the law where you live.
@@ -355,14 +363,6 @@ export function Results(p: Props) {
         </p>
       </div>
 
-      {p.checkPrompt && (
-        <details className="no-print paper p-5">
-          <summary className="cursor-pointer text-sm font-semibold">View the exact text sent to the check model</summary>
-          <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border border-border-subtle bg-bg p-3 font-mono text-[0.72rem]">
-            {p.checkPrompt}
-          </pre>
-        </details>
-      )}
 
       <div className="no-print flex flex-wrap gap-3">
         <button type="button" className="btn" onClick={p.onEdit}>

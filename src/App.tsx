@@ -12,6 +12,7 @@ import type { AiEngine } from './lib/engine'
 import { missingEnv } from './lib/firebase'
 import { loadEngine } from './lib/getEngine'
 import { isNetworkError, isOnline, useOnline } from './lib/network'
+import { checkStep, extractStep, rulesStep, type ReceiptStep } from './lib/receipt'
 import { fileToGenerativePart } from './lib/intake'
 import { checkDeviceAvailability, type DeviceAvailability } from './lib/onDevice'
 import { getPlaybook, type Playbook } from './lib/playbooks'
@@ -157,6 +158,9 @@ export default function App() {
   const [oneClickBusy, setOneClickBusy] = useState(false)
   const [checkStartedAt, setCheckStartedAt] = useState<number | null>(null)
   const online = useOnline()
+  const [receipt, setReceipt] = useState<ReceiptStep[]>([])
+  const [receiptLease, setReceiptLease] = useState('')
+  const setCheckRow = (row: ReceiptStep) => setReceipt((r) => [...r.filter((s) => s.step !== 'check'), row])
 
   const [remember, setRemember] = useState(rememberEnabled())
   const [saved, setSaved] = useState<Remembered | null>(loadApproved())
@@ -276,6 +280,9 @@ export default function App() {
         pinInfo = { kind: isThinExtract(out.extract, { sample: true }) ? 'fallback' : 'pinned', ...m, retried }
         next = structuredClone(SAMPLE_EXTRACT)
       }
+      const row = extractStep({ ranOn: out.source, raw: out.rawSource, ms: performance.now() - t0, prompt: out.prompt, leaseText: text, images })
+      setReceipt((r) => (batchMode ? [...r.filter((s) => s.step === 'extract'), row] : [row]))
+      setReceiptLease((l) => (batchMode ? `${l}\n${text}` : text))
       setExtract(next)
       setPin(pinInfo)
       setUnsure([])
@@ -306,6 +313,8 @@ export default function App() {
     setExtractSource('FIXTURE')
     setExtractMs(null)
     setExtractIsSample(false)
+    setReceipt([extractStep({ ranOn: 'FIXTURE', ms: 0, prompt: '', leaseText: '', images: [] })])
+    setReceiptLease('')
     setOriginalExtract(JSON.stringify(cleanExtract(sampleExtract as LeaseExtract)))
     setPin(null)
     setUnsure([])
@@ -324,6 +333,7 @@ export default function App() {
     const useCache = judge && ctx.sample
     /** Offline verdict: the in-browser rules already give tiles, costs and questions. No model call. */
     const finishRulesOnly = (t0: number) => {
+      setCheckRow(checkStep({ ranOn: 'RULES_ONLY', ms: performance.now() - t0, prompt: '' }))
       setFindings(ruleFindings)
       setCheckSource('RULES_ONLY')
       setCheckMs(performance.now() - t0)
@@ -353,6 +363,7 @@ export default function App() {
     setCheckPrompt(buildCheckPrompt(approved, ctx.playbook, ctx.unsure))
     const t0 = performance.now()
     const applyLive = (out: CheckOutput) => {
+      setCheckRow(checkStep({ ranOn: out.source, raw: out.rawSource, ms: performance.now() - t0, prompt: out.prompt }))
       setFindings(mergeFindings(ruleFindings, out.findings))
       setCheckSource(out.source)
       setCheckMs(performance.now() - t0)
@@ -397,6 +408,7 @@ export default function App() {
     }
 
     const cv = cachedSampleVerdict(ctx.playbook, approved)
+    setCheckRow(checkStep({ ranOn: 'CACHED', ms: performance.now() - t0, prompt: '' }))
     setFindings(mergeFindings(ruleFindings, cv.cloudFindings))
     setCheckSource('CACHED')
     setCheckMs(performance.now() - t0)
@@ -444,7 +456,10 @@ export default function App() {
     if (!source) return
     const approved = cleanExtract(source)
     const pb = ctx?.playbook ?? playbook
+    const tRules = performance.now()
     const ruleFindings = runPlaybook(pb, approved)
+    const rulesRow = rulesStep(performance.now() - tRules)
+    setReceipt((r) => [...r.filter((s) => s.step === 'extract'), rulesRow])
     setFindings(ruleFindings)
     setCheckSource(null)
     setCheckPrompt(null)
@@ -545,6 +560,8 @@ export default function App() {
 
   function startOver() {
     checkRun.current++
+    setReceipt([])
+    setReceiptLease('')
     oneClickStart.current = null
     setOneClickMs(null)
     setPin(null)
@@ -585,6 +602,8 @@ export default function App() {
     setExtractIsSample(false)
     setExtractMs(null)
     setPin(null)
+    setReceipt([])
+    setReceiptLease('')
     setOriginalExtract(JSON.stringify(cleanExtract(saved.extract)))
     setPlaybookId(saved.playbookId)
     setStep('review')
@@ -910,6 +929,8 @@ export default function App() {
                 onStartOver={startOver}
                 cloudReviewAvailable={aiReady}
                 online={online}
+                receipt={receipt}
+                receiptLease={receiptLease}
               />
             )}
           </div>

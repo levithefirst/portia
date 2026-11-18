@@ -386,6 +386,44 @@ try {
     await ctx.close()
   }
 
+  // ---------- E) Item 2: privacy receipt ----------
+  const onDeviceRowsHonest = (page) =>
+    page.evaluate(() => [...document.querySelectorAll('[data-testid^="receipt-row-"]')].every((r) => r.dataset.ran !== 'ON_DEVICE' || r.dataset.sdk === 'on_device'))
+  {
+    // Sample one click with Gemini Nano ready (fake engine reports inferenceSource "on_device").
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/?judge=1&fakeCheck=ok&fakeDevice=available')
+    ok((await page.getByTestId('run-sample').innerText()) === 'Run the sample lease', 'E: with Nano ready the one-click label is "Run the sample lease"')
+    await page.getByTestId('run-sample').click()
+    await page.getByTestId('verdict-time').waitFor({ timeout: 10000 })
+    const rows = await page.locator('[data-testid^="receipt-row-"]').count()
+    ok(rows === 3, `E: receipt has three rows (${rows})`)
+    ok((await page.getByTestId('receipt-row-extract').getAttribute('data-ran')) === 'ON_DEVICE' && (await page.getByTestId('receipt-row-extract').getAttribute('data-kind')) === 'nothing', 'E: on-device extract sent nothing')
+    ok((await page.getByTestId('receipt-row-check').getAttribute('data-kind')) === 'approved-json', 'E: check row is approved-json')
+    const head = await page.getByTestId('receipt-headline').innerText()
+    ok(head.includes('The lease never left this device') && !head.includes('Lease text sent'), `E: headline is truthful for the sample ("${head.slice(0, 80)}...")`)
+    ok(await onDeviceRowsHonest(page), 'E: no row says ON_DEVICE without sdkInferenceSource "on_device"')
+    ok((await page.getByText('View the exact text sent to the check model').count()) === 1, 'E: exact check text shown once, inside the receipt')
+    ok(JSON.stringify(await counts(page)) === '[3,6,0]', 'E: Nano path keeps 3/6/0')
+    await page.close()
+  }
+  {
+    // Consent cloud path: the headline must not claim 0.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/app?fakeCheck=ok')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('approve').click()
+    await page.getByTestId('badge-Check').waitFor({ timeout: 10000 })
+    const h = page.getByTestId('receipt-headline')
+    ok((await h.getAttribute('data-zero')) === 'false' && (await h.innerText()).startsWith('Lease text sent to cloud Gemini with your consent:'), `E: consent path headline states what was sent ("${await h.innerText()}")`)
+    ok((await page.getByTestId('receipt-row-extract').getAttribute('data-kind')) === 'lease-text-and-images', 'E: consent extract row is lease-text-and-images')
+    ok(await onDeviceRowsHonest(page), 'E: consent path has no ON_DEVICE rows')
+    await page.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()

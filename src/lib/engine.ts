@@ -18,8 +18,9 @@ export interface AiEngine {
    * (a download would need a user gesture). Never blocks the page.
    */
   warmUp(): Promise<void>
-  extract(prompt: string, images: ImagePart[]): Promise<{ text: string; source: SourceLabel }>
-  check(prompt: string): Promise<{ text: string; source: SourceLabel }>
+  /** rawSource is the exact result.response.inferenceSource string from the SDK (undefined if absent). */
+  extract(prompt: string, images: ImagePart[]): Promise<{ text: string; source: SourceLabel; rawSource?: string }>
+  check(prompt: string): Promise<{ text: string; source: SourceLabel; rawSource?: string }>
 }
 
 /** Maps the SDK's InferenceSource values ("on_device" / "in_cloud") to the label shown on screen. */

@@ -29,13 +29,13 @@ export const firebaseEngine: AiEngine = {
       images.length > 0
         ? await extractModel.generateContent([prompt, ...images])
         : await extractModel.generateContent(prompt)
-    return { text: result.response.text(), source: toSourceLabel(result.response.inferenceSource) }
+    return { text: result.response.text(), source: toSourceLabel(result.response.inferenceSource), rawSource: result.response.inferenceSource }
   },
 
   async check(prompt) {
     const { checkModel } = getModels()
     // The prompt string contains the approved JSON as text. No images, no lease text.
     const result = await checkModel.generateContent(prompt)
-    return { text: result.response.text(), source: toSourceLabel(result.response.inferenceSource) }
+    return { text: result.response.text(), source: toSourceLabel(result.response.inferenceSource), rawSource: result.response.inferenceSource }
   },
 }
