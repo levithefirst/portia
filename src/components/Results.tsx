@@ -278,14 +278,12 @@ export function Results(p: Props) {
             <p className="mt-2 text-text-secondary" aria-live="polite">
               {p.liveRetry.active
                 ? `Retrying the live check in the background (attempt ${p.liveRetry.attempt} of ${p.liveRetry.total}). The live result replaces this one if it arrives.`
-                : 'The live check is still unavailable. Use "Retry cloud review" to try again.'}
+                : 'The live check is still unavailable. Use "Retry live check" to try again.'}
             </p>
           )}
-          {!p.liveRetry?.active && (
-            <button type="button" className="btn mt-3 text-sm" onClick={p.onRetryCheck}>
-              Retry cloud review
-            </button>
-          )}
+          <button type="button" className="btn mt-3 text-sm" onClick={p.onRetryCheck} data-testid="retry-live">
+            Retry live check
+          </button>
         </div>
       )}
       {p.checkSource === 'RULES_ONLY' && (

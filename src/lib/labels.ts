@@ -19,7 +19,7 @@ export function sourceText(source: SourceLabel, step: 'Extract' | 'Check', nanoM
     if (step === 'Check') return 'Checked in the cloud'
     return nanoMissing ? 'Extracted in the cloud. Gemini Nano is not on this device' : 'Extracted in the cloud'
   }
-  if (source === 'CACHED') return 'Cached sample result'
+  if (source === 'CACHED') return step === 'Extract' ? 'Extract: recorded sample, not live' : 'Check: recorded sample, not live'
   if (source === 'RULES_ONLY') return 'Offline: checked on this device'
   return 'Sample data, no model call'
 }

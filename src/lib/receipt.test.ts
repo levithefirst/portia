@@ -76,3 +76,13 @@ describe('receipt rows and headline', () => {
     expect(receiptHeadline([rulesStep(1)], LEASE).zero).toBe(false)
   })
 })
+
+describe('recorded fallback receipt', () => {
+  it('says no lease text of yours was sent and never shows the extract as a model run', () => {
+    const steps = [extractStep({ ranOn: 'CACHED', ms: 300, prompt: '', leaseText: '', images: [] }), rulesStep(1), checkStep({ ranOn: 'CACHED', ms: 5, prompt: 'x' })]
+    expect(steps[0]).toMatchObject({ ranOn: 'CACHED', requestedMode: 'none', sentToCloud: { kind: 'nothing' } })
+    const h = receiptHeadline(steps, LEASE)
+    expect(h.text).toContain('No lease text of yours was sent in this run.')
+    expect(h.zero).toBe(false)
+  })
+})
