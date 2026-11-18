@@ -463,6 +463,45 @@ try {
     await page.close()
   }
 
+  // ---------- G) Item 4: thin-extract guard and preliminary state ----------
+  {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/app?fakeExtract=thin')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('thin-warning').waitFor()
+    const approve = page.getByTestId('approve')
+    const desc = await approve.getAttribute('aria-describedby')
+    const descText = desc ? await page.locator(`#${desc}`).innerText() : ''
+    ok((await approve.isDisabled()) && descText.includes('missing too many fields'), 'G: disabled Approve exposes its reason via aria-describedby')
+    await page.locator('#f-depositAmount').fill('4625')
+    const desc2 = await approve.getAttribute('aria-describedby')
+    ok(!(await approve.isDisabled()) && (desc2 === null || (await page.locator(`#${desc2}`).count()) === 1), 'G: after a hand edit Approve is enabled and never points at a missing id')
+    await page.close()
+  }
+  {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/?judge=1&fakeCheck=slow')
+    await page.getByTestId('run-sample').click()
+    await page.getByTestId('preliminary').waitFor({ timeout: 5000 })
+    const tiles = page.getByTestId('tiles')
+    ok((await tiles.getAttribute('aria-busy')) === 'true' && (await page.getByTestId('preliminary').innerText()).includes('Preliminary'), 'G: tiles are aria-busy with a visible "Preliminary" label while checking')
+    await page.getByTestId('cached-banner').waitFor({ timeout: 10000 })
+    ok((await tiles.getAttribute('aria-busy')) === 'false', 'G: tiles stop being busy once the result is final')
+    await page.close()
+  }
+  {
+    const seen = []
+    for (let i = 0; i < 3; i++) {
+      const { page } = await oneClick('fakeCheck=ok')
+      seen.push((await counts(page)).join('/'))
+      await page.close()
+    }
+    ok(seen.every((c) => c === '3/6/0'), `G: 3 consecutive one-click runs give 3/6/0 (${seen.join(', ')})`)
+  }
+
 } finally {
   await browser.close()
   prod.kill()

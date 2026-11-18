@@ -172,9 +172,11 @@ export function Results(p: Props) {
         </div>
 
         {preliminary ? (
-          <p className="mt-3 text-sm text-text-secondary" role="status" aria-live="polite" data-testid="preliminary">
+          <p id="prelim-label" className="mt-3 text-sm text-text-secondary" role="status" aria-live="polite" data-testid="preliminary">
             <span className="font-medium text-text">Preliminary: playbook rules in your browser.</span> Cloud review running{' '}
-            <span className="font-mono">{(elapsed / 1000).toFixed(1)}s</span>
+            <span className="font-mono" aria-hidden="true">
+              {(elapsed / 1000).toFixed(1)}s
+            </span>
           </p>
         ) : null}
 
@@ -192,7 +194,14 @@ export function Results(p: Props) {
           ) : null}
 
           <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Filter findings by status">
+            <div
+              className="grid grid-cols-3 gap-2"
+              role="group"
+              aria-label={preliminary ? 'Preliminary counts. Filter findings by status' : 'Filter findings by status'}
+              aria-busy={preliminary}
+              aria-describedby={preliminary ? 'prelim-label' : undefined}
+              data-testid="tiles"
+            >
               {counts.map(([s, n]) => {
                 const on = show.includes(s)
                 const tone = s === 'RED' ? 'text-red-text' : s === 'AMBER' ? 'text-amber-text' : 'text-green-text'

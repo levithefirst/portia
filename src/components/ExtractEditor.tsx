@@ -280,7 +280,7 @@ export function ExtractEditor(p: Props) {
 
   const actionsBar = (
       <div className="no-print flex flex-wrap items-center gap-3">
-        <button type="button" className="btn btn-primary" onClick={p.onApprove} disabled={p.busy || approveBlocked} data-testid="approve" aria-describedby={p.thin ? 'thin-msg' : undefined}>
+        <button type="button" className="btn btn-primary" onClick={p.onApprove} disabled={p.busy || approveBlocked} data-testid="approve" aria-describedby={approveBlocked ? 'thin-msg' : undefined}>
           {p.busy ? 'Checking…' : p.cloudReviewAvailable ? 'Approve & check' : 'Approve & run playbook checks'}
         </button>
         <button type="button" className="btn" onClick={p.onBack} disabled={p.busy}>
