@@ -9,6 +9,7 @@ import { LogoMark } from './Shell'
 import { verdictTimeText } from '../lib/judge'
 import type { ReceiptStep } from '../lib/receipt'
 import { Receipt } from './Receipt'
+import { mailtoHref, shareText } from '../lib/share'
 
 export interface CachedInfo {
   reason: string
@@ -351,9 +352,21 @@ export function Results(p: Props) {
       <div className="paper p-5 sm:p-6" data-testid="questions">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-serif text-xl font-medium">Questions for the landlord</h2>
-          <button type="button" className="no-print btn btn-primary text-sm" onClick={() => window.print()}>
-            <IconPrint /> Print or save as PDF
-          </button>
+          <div className="no-print flex flex-wrap gap-2">
+            {questions.length > 0 && (
+              <>
+                <button type="button" className="btn text-sm" onClick={() => copy(shareText(questions, p.extract), 'all-questions')} data-testid="copy-all">
+                  <IconCopy /> {copied === 'all-questions' ? 'Copied' : 'Copy all'}
+                </button>
+                <a className="btn text-sm no-underline" href={mailtoHref(questions, p.extract)} data-testid="email-questions">
+                  Email these questions
+                </a>
+              </>
+            )}
+            <button type="button" className="btn btn-primary text-sm" onClick={() => window.print()}>
+              <IconPrint /> Print or save as PDF
+            </button>
+          </div>
         </div>
         {questions.length ? (
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm">

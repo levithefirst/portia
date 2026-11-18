@@ -39,6 +39,13 @@ export function oneTimeFees(x: LeaseExtract): number {
   }, 0)
 }
 
+/** Due at signing: deposit + one-time required fees + the first month with required monthly fees. */
+export function dueAtSigning(x: LeaseExtract): number | undefined {
+  const rent = monthlyRent(x)
+  if (!rent) return undefined
+  return (x.depositAmount ?? 0) + oneTimeFees(x) + rent + totalMonthlyFees(x)
+}
+
 export function formatMoney(n: number | undefined, currency?: string): string {
   if (typeof n !== 'number' || Number.isNaN(n)) return 'n/a'
   const code = (currency ?? '').toUpperCase()

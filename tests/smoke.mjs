@@ -518,6 +518,16 @@ try {
     await page.close()
   }
 
+  // ---------- I) Item 6: copy all and email ----------
+  {
+    const { page } = await oneClick('fakeCheck=ok')
+    const href = await page.getByTestId('email-questions').getAttribute('href')
+    ok(href.startsWith('mailto:?subject='), 'I: "Email these questions" is a mailto:?subject= link with no recipient')
+    ok(decodeURIComponent(href).includes('$1,961.95'), 'I: email body carries the true monthly cost')
+    ok((await page.getByTestId('copy-all').count()) === 1 && (await page.getByText('Print or save as PDF').count()) === 1, 'I: Copy all sits next to Print')
+    await page.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()
