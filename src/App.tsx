@@ -83,7 +83,11 @@ interface CheckCtx {
 function friendlyError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e)
   if (/app.?check|attestation|recaptcha/i.test(msg)) {
-    return `Firebase App Check rejected the request. If this is a local or preview build, register the debug token from the browser console in the Firebase console. (${msg})`
+    // The debug-token hint is for developers running a local dev build only.
+    if (import.meta.env.DEV) {
+      return `Firebase App Check rejected the request. Register the debug token printed in the browser console under Security > App Check > Apps > Manage debug tokens. (${msg})`
+    }
+    return 'Portia could not reach the cloud model from this browser right now. Please try again in a moment.'
   }
   if (/429|quota|resource.?exhausted|rate/i.test(msg)) return `The model is rate limited right now. Wait a moment and retry. (${msg})`
   if (/503|unavailable|overloaded/i.test(msg)) return `The model is temporarily unavailable. Retry in a few seconds. (${msg})`
