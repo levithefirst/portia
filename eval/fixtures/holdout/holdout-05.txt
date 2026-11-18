@@ -1,0 +1,15 @@
+SYNTHETIC TEST LEASE holdout-05. Not a real agreement. All names and places are invented.
+
+ASSURED SHORTHOLD TENANCY AGREEMENT
+
+Premises: 22A, 881 Copperleaf Drive, Little Wexcombe
+Landlord: Fictional Lettings Ltd
+Tenant: Tenant A
+
+1. RENT. The Tenant shall pay rent of £1,425 monthly.
+2. DEPOSIT. The Tenant shall pay a security deposit of £1,973.08 at signing.
+3. LATE PAYMENT. If rent remains unpaid seven (7) days after the due date, a late charge of £30 applies.
+4. CHARGES. The following charges are mandatory and payable in addition to rent:
+   - Tenancy Administration Fee: £325 once, at signing
+5. TERM AND RENEWAL. This agreement renews automatically for a further term of the same length unless the Tenant gives written notice at least 30 days before the end of the term.
+6. REPAIRS. The Landlord is responsible for structural repairs. The Tenant reports defects promptly.

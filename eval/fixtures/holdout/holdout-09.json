@@ -1,0 +1,28 @@
+{
+  "synthetic": true,
+  "id": "holdout-09",
+  "split": "holdout",
+  "jurisdiction": "Lagos",
+  "truth": {
+    "currency": "NGN",
+    "rentAmount": 1850000,
+    "rentPeriod": "yearly",
+    "depositAmount": 185000,
+    "noticePeriodDays": 90,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Agency Fee",
+        "amount": 185000,
+        "frequency": "one-time"
+      },
+      {
+        "name": "Legal Fee",
+        "amount": 185000,
+        "frequency": "one-time"
+      }
+    ],
+    "lateFeeAmount": 45000,
+    "lateFeeGraceDays": 14
+  }
+}

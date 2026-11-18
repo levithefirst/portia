@@ -1,0 +1,9 @@
+SYNTHETIC TEST LEASE holdout-06. Not a real agreement. All names and places are invented.
+
+This agreement is made between Fictional Lettings Ltd (the Landlord) and Test Tenant (the Tenant) for 1, 336 Lantern Row, Palmgrove Close Estate.
+
+The rent is N3,400,000 per annum, and the Tenant pays a deposit of N340,000 when signing. No late charge applies to overdue rent.
+
+In addition to rent, the Tenant must pay a Agency Fee of N340,000 once, at signing, a Service Charge of N600,000 per year, a Development Levy of N50,000 once, at signing, a Legal Fee of N340,000 once, at signing. These charges are not optional.
+
+This agreement renews automatically for a further term of the same length unless the Tenant gives written notice at least six (6) months before the end of the term.

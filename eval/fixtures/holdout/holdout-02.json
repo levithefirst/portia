@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "id": "holdout-02",
+  "split": "holdout",
+  "jurisdiction": "England & Wales",
+  "truth": {
+    "currency": "GBP",
+    "rentAmount": 1300,
+    "rentPeriod": "monthly",
+    "depositAmount": 1500,
+    "noticePeriodDays": 30,
+    "autoRenewal": "yes",
+    "mandatoryFees": [
+      {
+        "name": "Communal Cleaning Charge",
+        "amount": 30,
+        "frequency": "monthly"
+      }
+    ],
+    "lateFeeAmount": 30,
+    "lateFeeGraceDays": 7
+  }
+}

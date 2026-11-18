@@ -1,0 +1,17 @@
+{
+  "synthetic": true,
+  "id": "holdout-04",
+  "split": "holdout",
+  "jurisdiction": "US",
+  "truth": {
+    "currency": "USD",
+    "rentAmount": 3350,
+    "rentPeriod": "monthly",
+    "depositAmount": 5025,
+    "noticePeriodDays": 60,
+    "autoRenewal": "yes",
+    "mandatoryFees": [],
+    "lateFeeAmount": 200,
+    "lateFeeGraceDays": 0
+  }
+}
