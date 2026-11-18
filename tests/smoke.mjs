@@ -91,13 +91,13 @@ try {
     await page.waitForFunction(() => document.querySelector('#lease-text')?.value.includes('Technology Package'))
     ok(true, 'A: Load Sample fills the lease text')
 
-    // PDF rejection
+    // Unsupported type rejection (PDFs are accepted since Item 3)
     const tmp = mkdtempSync(join(tmpdir(), 'portia-'))
-    const pdf = join(tmp, 'lease.pdf')
-    writeFileSync(pdf, '%PDF-1.4 fake')
-    await page.getByTestId('file-input').setInputFiles(pdf)
+    const docx = join(tmp, 'lease.docx')
+    writeFileSync(docx, 'not a pdf')
+    await page.getByTestId('file-input').setInputFiles(docx)
     const rej = await page.getByTestId('rejections').innerText()
-    ok(rej.includes('Portia accepts pasted text or JPEG/PNG page images. Export or photograph each page.'), 'A: PDF rejected with the standard message')
+    ok(rej.includes('Portia accepts pasted text, PDFs, or JPEG/PNG page images.'), 'A: .docx rejected with the standard message')
 
     await page.getByRole('button', { name: 'Load sample photos' }).click()
     await page.getByRole('img', { name: 'Page 2 thumbnail' }).waitFor()
@@ -421,6 +421,45 @@ try {
     ok((await h.getAttribute('data-zero')) === 'false' && (await h.innerText()).startsWith('Lease text sent to cloud Gemini with your consent:'), `E: consent path headline states what was sent ("${await h.innerText()}")`)
     ok((await page.getByTestId('receipt-row-extract').getAttribute('data-kind')) === 'lease-text-and-images', 'E: consent extract row is lease-text-and-images')
     ok(await onDeviceRowsHonest(page), 'E: consent path has no ON_DEVICE rows')
+    await page.close()
+  }
+
+  // ---------- F) Item 3: PDF intake, in the browser, no network to AI hosts ----------
+  {
+    const tmpPdf = mkdtempSync(join(tmpdir(), 'portia-pdf-'))
+    const maker = await browser.newPage()
+    const leaseTxt = readFileSync(new URL('../public/fixture-lease.txt', import.meta.url), 'utf8')
+    const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    await maker.setContent(`<pre style="font:13px/1.4 Georgia;white-space:pre-wrap">SYNTHETIC\n${esc(leaseTxt)}</pre>`)
+    const textPdf = join(tmpPdf, 'lease-text.pdf')
+    await maker.pdf({ path: textPdf, format: 'Letter' })
+    const png = readFileSync(new URL('../public/fixtures/lease-page-2.png', import.meta.url)).toString('base64')
+    await maker.setContent(`<img style="width:100%" src="data:image/png;base64,${png}">`)
+    const scanPdf = join(tmpPdf, 'lease-scan.pdf')
+    await maker.pdf({ path: scanPdf, format: 'Letter' })
+    await maker.close()
+
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    const aiRequests = []
+    const workerOnLanding = []
+    page.on('request', (r) => {
+      if (/firebasevertexai|generativelanguage/.test(r.url())) aiRequests.push(r.url())
+      if (/pdf\.worker|\/pdf-[\w-]+\.js/.test(r.url())) workerOnLanding.push(r.url())
+    })
+    await page.goto('http://localhost:4318/')
+    await page.waitForLoadState('networkidle')
+    ok(workerOnLanding.length === 0, 'F: landing page does not fetch pdfjs or pdf.worker')
+    await page.goto('http://localhost:4318/app')
+    await page.getByTestId('file-input').setInputFiles(textPdf)
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.includes('Technology Package'), null, { timeout: 15000 })
+    const val = await page.locator('#lease-text').inputValue()
+    ok(val.startsWith('--- page 1 ---') && val.includes('Valet Trash Service'), 'F: text PDF fills the textarea with page markers')
+    ok((await page.getByTestId('pdf-status').innerText()).includes('Text read from your PDF in this browser. Nothing was uploaded.'), 'F: text PDF status line')
+    await page.getByTestId('file-input').setInputFiles(scanPdf)
+    await page.getByRole('img', { name: 'Page 1 thumbnail' }).waitFor({ timeout: 15000 })
+    const thumbs = await page.locator('img[alt$="thumbnail"]').count()
+    ok(thumbs >= 1 && (await page.getByTestId('pdf-status').innerText()).startsWith('Scanned PDF: pages were turned into images in this browser.'), `F: scanned PDF becomes PNG page thumbnails (${thumbs})`)
+    ok(aiRequests.length === 0, 'F: no request to firebasevertexai or generativelanguage while parsing PDFs')
     await page.close()
   }
 

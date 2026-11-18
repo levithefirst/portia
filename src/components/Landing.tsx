@@ -376,7 +376,7 @@ function Faq() {
   const qa: [string, ReactNode][] = [
     ['Is this legal advice?', 'No. Portia flags patterns from a curated, static playbook. It does not know the law where you live and cannot tell you whether a term is enforceable. Check with a local tenant union, legal aid service or lawyer before relying on any flag.'],
     ['Which places does it cover?', `${PLAYBOOKS.length} playbooks: ${PLAYBOOKS.map((p) => p.jurisdiction).join('; ')}.`],
-    ['What can I upload?', 'Pasted text, or JPEG and PNG photos of each page, up to 3 pages per extract with more added in batches. PDFs are not accepted: export or photograph each page.'],
+    ['What can I upload?', 'Pasted text, a PDF, or JPEG and PNG photos of each page. A PDF is read in your browser: its text fills the text box, or a scanned PDF becomes page images. Up to 3 page images per extract, with more added in batches.'],
     ['What if my browser does not have Gemini Nano?', 'Portia tells you, and offers cloud Gemini through Firebase AI Logic with your consent for that document. Nothing is sent before you agree.'],
     ['Do I need an account?', 'No. There is no sign-up, and nothing is stored unless you turn on "remember".'],
     ['What do red, amber and green mean?', 'Red means "likely worth pushing back on before signing", amber means "ask about this", green means "looks typical". Counts come from the playbook rules, not from the model.'],

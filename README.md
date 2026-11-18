@@ -107,7 +107,7 @@ App Check: Firebase AI Logic requires App Check. Production uses reCAPTCHA Enter
 
 ## Privacy
 
-Portia has no server, no account and no database. When Gemini Nano is ready, the lease is processed on your device and never leaves it. If it is not ready, nothing is sent until you accept a banner that says your text and photos will go to Google's cloud Gemini through Firebase AI Logic. The check step sends only the JSON you approved, never the lease text or photos. "Remember my last approved extract" is off by default and stores only that JSON in localStorage. PDFs are rejected. Full description: the in-app Privacy page (`/privacy`).
+Portia has no server, no account and no database. When Gemini Nano is ready, the lease is processed on your device and never leaves it. If it is not ready, nothing is sent until you accept a banner that says your text and photos will go to Google's cloud Gemini through Firebase AI Logic. The check step sends only the JSON you approved, never the lease text or photos. "Remember my last approved extract" is off by default and stores only that JSON in localStorage. PDFs are parsed in the browser by pdf.js and nothing is uploaded while parsing. Full description: the in-app Privacy page (`/privacy`).
 
 ### Verify the check payload yourself (DevTools)
 

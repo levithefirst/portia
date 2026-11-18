@@ -16,8 +16,9 @@ export function Privacy() {
         <h2 className="text-lg font-semibold">1. Extract: on your device when possible</h2>
         <ul className="mt-2 list-disc space-y-1.5 pl-5">
           <li>
-            Portia reads your pasted text or JPEG/PNG page photos in the browser. PDFs and other file types are rejected and never
-            sent anywhere.
+            Portia reads your pasted text, PDFs, or JPEG/PNG page photos in the browser. A PDF is parsed in this browser by
+            pdf.js: its text goes into the text box, or, for a scanned PDF, its pages are turned into PNG images here. Parsing a
+            PDF sends nothing anywhere. Other file types are rejected.
           </li>
           <li>
             The extract model uses Firebase AI Logic in <span className="font-mono text-sm">PREFER_ON_DEVICE</span> mode. When
