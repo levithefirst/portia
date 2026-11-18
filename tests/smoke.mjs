@@ -502,6 +502,22 @@ try {
     ok(seen.every((c) => c === '3/6/0'), `G: 3 consecutive one-click runs give 3/6/0 (${seen.join(', ')})`)
   }
 
+  // ---------- H) Item 5: no unconditional on-device claims without Nano ----------
+  {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+    const bad = []
+    for (const url of ['http://localhost:4318/', 'http://localhost:4318/app', 'http://localhost:4318/?judge=1']) {
+      await page.goto(url)
+      await page.waitForTimeout(400)
+      const text = await page.evaluate(() => document.body.innerText + ' ' + (document.querySelector('meta[name="description"]')?.content ?? ''))
+      for (const s of text.split(/(?<=[.!?])\s+/)) {
+        if (/on your device|on this device|never leaves|never left|stays? (in|on) (this|your) (browser|device)/i.test(s) && !/\b(when|if|once|while|until|first|can)\b|not available|cannot|without|\bremember\b|\bsaved?\b|\bstored?\b/i.test(s)) bad.push(`${url}: ${s.trim()}`)
+      }
+    }
+    ok(bad.length === 0, `H: no unconditional on-device claim with Nano unsupported${bad.length ? ': ' + bad.join(' | ') : ''}`)
+    await page.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()
