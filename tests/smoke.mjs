@@ -393,7 +393,10 @@ try {
     // Sample one click with Gemini Nano ready (fake engine reports inferenceSource "on_device").
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
     await page.goto('http://localhost:4318/?judge=1&fakeCheck=ok&fakeDevice=available')
-    ok((await page.getByTestId('run-sample').innerText()) === 'Run the sample lease', 'E: with Nano ready the one-click label is "Run the sample lease"')
+    const nanoLabel = await page
+      .waitForFunction(() => document.querySelector('[data-testid="run-sample"]')?.textContent === 'Run the sample lease', null, { timeout: 5000 })
+      .then(() => true, () => false)
+    ok(nanoLabel, 'E: with Nano ready the one-click label is "Run the sample lease"')
     await page.getByTestId('run-sample').click()
     await page.getByTestId('verdict-time').waitFor({ timeout: 10000 })
     const rows = await page.locator('[data-testid^="receipt-row-"]').count()

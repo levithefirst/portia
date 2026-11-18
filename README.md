@@ -19,29 +19,29 @@ Portia is not a "summarize this lease" wrapper. The output is a structured fee-a
 ## How the hybrid split works
 
 ```
- Lease text / JPEG+PNG page photos
-            │  (never leaves the device on the on-device path)
+ Lease text / PDF / JPEG+PNG page photos
+            │  PDF parsed in the browser by pdf.js (text, or scanned pages -> PNG). Nothing sent.
             ▼
- ┌─────────────────────────────┐   privacy gate: will this run on-device?
- │ Extract model               │── no ──► consent banner. Nothing is sent
- │ InferenceMode.PREFER_ON_DEVICE│          until the user clicks "Send to cloud Gemini"
- │ Gemini Nano (Chrome Prompt API)│
+ ┌────────────────────────────────┐   privacy gate: will this run on-device?
+ │ Extract model                  │── no ──► consent banner. Nothing is sent
+ │ InferenceMode.PREFER_ON_DEVICE │          until "Send to cloud Gemini"
+ │ Gemini Nano (Chrome Prompt API)│          (offline + no Nano: clear message, no banner)
  │ responseConstraint = leaseSchema│
- └─────────────────────────────┘
-            │  JSON fee map + badge: ON_DEVICE (or IN_CLOUD with consent)
+ └────────────────────────────────┘
+            │  JSON fee map + badge from inferenceSource (on_device, or in_cloud with consent)
             ▼
    User edits fields, marks "I'm not sure", sees the exact payload
             │  approved JSON only (no text, no images)
             ▼
- ┌─────────────────────────────┐
- │ Check model                 │   + deterministic playbook rules
- │ InferenceMode.ONLY_IN_CLOUD │     run in the browser on the same JSON
- │ gemini-3.5-flash-lite       │
- │ responseSchema = findings[] │
- └─────────────────────────────┘
+ ┌────────────────────────────────┐   playbook rules run in the browser on the same JSON:
+ │ Check model                    │   they set the red / amber / green counts.
+ │ InferenceMode.ONLY_IN_CLOUD    │   Offline or network error -> rules-only verdict,
+ │ cloud_model (Remote Config,    │   "Offline: checked on this device"
+ │ default gemini-3.5-flash-lite) │
+ └────────────────────────────────┘
             ▼
- Red / amber / green clause map, citations, "Ask the landlord", print / PDF
- badge: Check: IN_CLOUD
+ Clause map, citations, "Ask the landlord" (copy, email, print),
+ privacy receipt: each step, where it ran, what left the device
 ```
 
 | Step | Where it runs | What it sees |
@@ -61,6 +61,35 @@ Key files:
 ### Why the consent gate exists
 
 Under `PREFER_ON_DEVICE`, the SDK sends a request to the cloud whenever the on-device model is not ready (still downloading, not supported, or the browser has no Prompt API, as on Android Chrome or a Pixel 7). For a lease, that would silently ship the raw document while the UI implies privacy. Portia checks the same conditions the SDK checks (`LanguageModel` exists, `LanguageModel.availability()` is `"available"` with the same `createOptions`, images are JPEG/PNG) before every extract, and requires a click on "Send to cloud Gemini" otherwise. Consent is per document. Details in `docs/SDK-NOTES.md`.
+
+## Privacy receipt
+
+Every run ends with a receipt under the tiles (`src/lib/receipt.ts`, `src/components/Receipt.tsx`): one row per step (extract, playbook rules, cloud review) with where it ran, the time, and what left the device. "Ran on" for a model step comes only from the SDK's `inferenceSource`; rules, cached and sample steps have their own labels. Sizes are the prompt size passed to Firebase AI Logic (UTF-8 bytes), not bytes on the wire. The check row holds the exact text sent to the check model. "Copy receipt (JSON)" copies it; printing includes a one-line summary.
+
+The headline is measured, not assumed. `leaseTextSent()` slides 40-character windows over the whitespace-normalised lease text and counts lease characters that appear verbatim in what was sent. It reads "0 characters of lease text sent" only when the extract stayed on the device (or used sample data) and that count is 0. For the bundled sample it is not 0: the recorded extract's summary fields (repairs, early termination, attorney fees) copy three short lease phrases, 144 characters in all, so the receipt says the lease never left the device and lists those phrases. After a consented cloud extract it states what was sent, in the form "Lease text sent to cloud Gemini with your consent: N characters, N images."
+
+## Offline verdict
+
+The counts come from playbook rules that run in the browser, so Portia still gives a verdict with no network (`src/lib/network.ts`). If the device is offline, or the cloud check fails with a network error, the results are finalised from the rules: tiles, true monthly cost, due at signing and the questions, with the badge "Offline: checked on this device" (label `RULES_ONLY`, never `ON_DEVICE`) and a "Run cloud review now" button that is enabled only when you are back online. Nothing is sent automatically on reconnect. Offline without Gemini Nano, Portia cannot read a new lease and says so instead of offering cloud consent. The bundled sample still works offline. The production build also registers a small service worker (`public/sw.js`) that caches the app shell and never touches Firebase, Google APIs, gstatic or reCAPTCHA requests.
+
+## PDF intake
+
+PDFs (up to 15 MB and 30 pages) are parsed in the browser with `pdfjs-dist`, loaded only when the first PDF is added (`src/lib/pdf.ts`). A PDF with real text fills the lease text box, with `--- page N ---` markers. A scanned PDF is rendered page by page to PNG and queued as page images, so it goes through the same on-device or consent gate and the batch flow as photos. Parsing is not AI inference and sends nothing anywhere.
+
+## Remote Config
+
+`src/lib/config.ts` reads Firebase Remote Config in the background on the tool routes (`fetchAndActivate` raced against 1.5 s, minimum fetch interval 1 hour). It never blocks the first paint, Judge Mode warm-up or the one click; model instances created before it resolves use the defaults for that session. Invalid or missing values fall back to the defaults. The receipt footer shows the active values and whether they came from `remote` or `default`.
+
+| Key | Type | Default | Rule |
+| --- | --- | --- | --- |
+| `cloud_model` | string | `gemini-3.5-flash-lite` | Allowlist: `gemini-3.5-flash-lite`, `gemini-3.8-flash`; anything else uses the default |
+| `judge_timeout_ms` | number | `8000` | Clamped to 3000..20000 |
+| `extract_thin_retry` | boolean | `true` | Retry a thin Judge Mode sample extract once |
+| `playbook_min_version` | string | `""` | `YYYY-MM`; if a bundled playbook is older, shows "A newer playbook is published. Reload to update." |
+
+## Accuracy eval (`/eval`)
+
+30 SYNTHETIC leases with ground truth in `eval/fixtures/` (20 dev, 10 holdout written blind in their own commit before any prompt tuning). Run them through the real engine at `/eval?run=1` in a normal Chrome window, download the results JSON, then `npm run eval:score -- results.json` prints fee recall, exact dollar matches (rent, deposit, late fee, total monthly fees), true monthly cost exact match, median and p90 extract latency and the ON_DEVICE vs IN_CLOUD share, split dev vs holdout, and writes `eval/results/summary-<date>-<ranOn>.json`. The `/eval` page shows only committed summaries. **No eval run has been recorded yet.** See `eval/README.md`.
 
 ## Judge Mode (`?judge=1`)
 
@@ -119,11 +148,13 @@ Portia has no server, no account and no database. When Gemini Nano is ready, the
 ## Tests
 
 ```bash
-npm test              # unit tests (vitest): privacy gate, payload contents, parsing, rules, PDF rejection, Judge Mode cache
+npm test              # unit tests (vitest): gate, payloads, parsing, rules, receipt, share text, scorer, config, service worker
 npm run test:smoke    # builds twice and drives Chromium with Playwright + axe-core
 ```
 
-The smoke test needs no keys and no Nano. Part A uses the production build without env vars (setup state, sample extract, rules, PDF rejection, print list, privacy route, dark mode, axe). Part B uses a `--mode e2e` build with a fake engine that behaves like a phone without Nano: it asserts no model call happens before consent, the badges, and that the check request carries the edited JSON and no lease text or images. Part C is the Judge Mode suite: from `/?judge=1`, one click reaches a full-evidence verdict in under 10 s with the cloud check mocked OK, failing (429) and slow; five runs with drifting live extracts give identical counts; a thin sample extract is retried then shown as a labelled fallback; Approve is disabled on a thin extract; no Extract button is clickable under the consent banner; and the 412 px results fold and 1280x800 review fold are checked. The fake engine (`?fakeCheck=fail|slow`, `?fakeExtract=thin|thinonce|wild`) is compiled in only for `--mode e2e`.
+The smoke test needs no keys and no Nano. Part A uses the production build without env vars (setup state, sample extract, rules, PDF rejection, print list, privacy route, dark mode, axe). Part B uses a `--mode e2e` build with a fake engine that behaves like a phone without Nano: it asserts no model call happens before consent, the badges, and that the check request carries the edited JSON and no lease text or images. Part C is the Judge Mode suite: from `/?judge=1`, one click reaches a full-evidence verdict in under 10 s with the cloud check mocked OK, failing (429) and slow; five runs with drifting live extracts give identical counts; a thin sample extract is retried then shown as a labelled fallback; Approve is disabled on a thin extract; no Extract button is clickable under the consent banner; and the 412 px results fold and 1280x800 review fold are checked. Later parts cover the offline verdict (D), the privacy receipt (E), PDF intake with no AI-host requests (F), the thin-extract guard and preliminary state (G), the no-Nano copy audit (H), copy and email (I), the eval page (J), Remote Config defaults (K), the PWA files and meta tags (L) and the accessibility pass (M). The fake engine (`?fakeCheck=fail|slow|offline`, `?fakeExtract=thin|thinonce|wild`, `?fakeDevice=available`) is compiled in only for `--mode e2e`.
+
+`scripts/verify.sh` runs typecheck, unit tests, build and smoke in order.
 
 To exercise the real cloud path locally, put real values in `.env`, run `npm run dev`, register the debug token, and use the app.
 
@@ -131,7 +162,7 @@ To exercise the real cloud path locally, put real values in `.env`, run `npm run
 
 **M0** SDK notes pin `firebase@13.3.0` and quote the live flag and default model (`docs/SDK-NOTES.md`); handoff checklist exists; no invented flags, keys or SDK names.
 **M1** `npm ci` works; tokens in `src/styles.css` (Tailwind default palette removed); Apache-2.0 `LICENSE`; `vercel.json` rewrites; `.env` gitignored, `.env.example` blank; repo private.
-**M2** Build succeeds without secrets; Load Sample > Extract > edit > Approve & check implemented; badges on extract and check; consent banner before any cloud extract; PDF rejected; "Not legal advice" visible; check payload is approved JSON only.
+**M2** Build succeeds without secrets; Load Sample > Extract > edit > Approve & check implemented; badges on extract and check; consent banner before any cloud extract; PDF rejected (since Addendum 4, PDFs are parsed in the browser instead); "Not legal advice" visible; check payload is approved JSON only.
 **M3** Multi-page photos (up to 3 per turn, batch merge beyond); unclear fields flagged and still approvable; playbook citation per finding; printable question list; recoverable errors with retry; smoke test runnable; privacy copy matches code.
 **M4** Finished UI (light/dark/phone); remember toggle off by default, JSON only; demo script, Devpost text, submission checklist, refreshed handoff.
 **M5** See the final report in `docs/SUBMISSION-CHECKLIST.md`.

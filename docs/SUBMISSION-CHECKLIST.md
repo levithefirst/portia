@@ -78,3 +78,23 @@ Legend: **Repo** = done in code/docs. **Handoff #n** = Portia bot step in `docs/
 | 10 | Glanceable review: cost math + Approve above the 1280x800 fold | `src/components/ExtractEditor.tsx` | PASS |
 
 Copy note: the requested strings with an em dash are rendered with a colon or full stop ("Preliminary: playbook rules in your browser", "Extracted in the cloud. Gemini Nano is not on this device"), per Fluid's standing no-em-dash preference.
+
+## Addendum 4 (win push) status
+
+| # | Item | Where | Status |
+| --- | --- | --- | --- |
+| 1 | Offline verdict from in-browser rules (`RULES_ONLY`, "Offline: checked on this device", "Run cloud review now") | `src/lib/network.ts`, `src/App.tsx`, `src/components/Results.tsx` | Done |
+| 2 | Privacy receipt with measured lease-text overlap | `src/lib/receipt.ts`, `src/components/Receipt.tsx` | Done. The sample measures 144 characters, so its headline does not claim 0 |
+| 3 | PDF intake in the browser | `src/lib/pdf.ts`, `src/components/Intake.tsx` | Done |
+| 4 | Thin-extract guard and preliminary state hardening | `ExtractEditor.tsx`, `Results.tsx` | Done |
+| 5 | No-Nano copy audit | `index.html` meta description fixed | Done |
+| 6 | Copy all and email the landlord questions | `src/lib/share.ts` | Done |
+| 7 | Accuracy eval harness, `/eval` | `eval/`, `scripts/eval-score.mjs`, `src/components/Eval.tsx` | Done; **no results recorded** (needs a real run by Fluid, see `eval/README.md`) |
+| 8 | Remote Config with safe defaults | `src/lib/config.ts`, `src/lib/firebase.ts` | Done; template to be created in the console (HANDOFF 7c) |
+| 9a | OG image and social tags | `public/og.png`, `index.html` | Done |
+| 9b | PWA manifest and service worker | `public/manifest.webmanifest`, `public/sw.js`, `vercel.json` | Done |
+| 9c | Accessibility pass | `Results.tsx` | Done |
+| 9d | Spanish toggle | | **Skipped**: a partial translation of the tool path would have been half-built UI |
+| 10 | Docs ordered by the four criteria | `README.md`, `docs/DEVPOST.md` | Done |
+
+Canonical sample numbers unchanged: 3 red / 6 amber / 0 green, rent $1,850, required fees $111.95, true monthly cost $1,961.95, due at signing $6,586.95.

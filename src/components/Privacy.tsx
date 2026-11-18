@@ -70,6 +70,18 @@ export function Privacy() {
           </li>
           <li>Your theme choice is saved in localStorage.</li>
           <li>
+            After every run, a privacy receipt lists each step, where it ran and what left this device, measured from the request
+            Portia actually passed to Firebase AI Logic.
+          </li>
+          <li>
+            On the tool pages, Portia asks Firebase Remote Config for a few settings (cloud model name, timeouts). That request
+            contains no document data. If it fails, built-in defaults are used.
+          </li>
+          <li>
+            The installed app shell (pages, scripts and styles) is cached by a service worker so Portia opens offline. It never
+            caches your lease, and it never handles requests to Firebase, Google or reCAPTCHA.
+          </li>
+          <li>
             Judge Mode (<span className="font-mono text-sm">?judge=1</span>) sets a flag in sessionStorage for this tab and
             initialises Firebase and App Check as soon as the page loads instead of on your first click. It sends no document
             data. For the unmodified sample lease only, it can show a bundled sample verdict, clearly labelled, if the live check

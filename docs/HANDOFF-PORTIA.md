@@ -58,6 +58,17 @@ Public app URL: **https://askportia.vercel.app** (Judge Mode: https://askportia.
    6. On GitHub, open `src/fixtures/sample-verdict.json` on `main`, choose **Edit** (or upload), replace the contents with the downloaded file, and commit to `main` with the message `Record Judge Mode sample verdict`. Vercel redeploys automatically.
    7. Check: open `https://<domain>/?judge=1` and confirm the app still loads.
 
+7c. **Optional: create the Remote Config template** (the app works without it; defaults apply). Firebase console > project `portia-f1dbe` > **Run > Remote Config** (follow the live console label if it differs) > create these parameters, then **Publish changes**. Never put secrets here.
+   | Key | Type | Default value |
+   | --- | --- | --- |
+   | `cloud_model` | String | `gemini-3.5-flash-lite` (only `gemini-3.5-flash-lite` or `gemini-3.8-flash` are accepted) |
+   | `judge_timeout_ms` | Number | `8000` (the app clamps to 3000..20000) |
+   | `extract_thin_retry` | Boolean | `true` |
+   | `playbook_min_version` | String | empty |
+   Check: open https://askportia.vercel.app/?judge=1, run the sample, and the receipt footer reads "source remote".
+
+7d. **Optional: record an eval run** on a Gemini Nano machine (Fluid, normal Chrome window): follow `eval/README.md`, then commit only `eval/results/summary-*.json`.
+
 8. **Make the repo public, only after Fluid explicitly OKs it, and before the Devpost submit.** GitHub > `levithefirst/portia` > Settings > General > Danger Zone > Change visibility > Public. Then confirm the **Apache-2.0** license shows in the repo's **About** section (right sidebar). If it does not, check that `LICENSE` is on the default branch (`main`). Claude Code must not flip visibility.
 
 9. **Fluid only (not the Portia bot, not Claude Code).**
