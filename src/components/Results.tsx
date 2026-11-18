@@ -45,6 +45,8 @@ interface Props {
   nanoMissing: boolean
   pinnedNote: string | null
   onDownloadFixture?: () => void
+  /** Browser online state; the offline "Run cloud review now" button is enabled only when true. */
+  online: boolean
 }
 
 const ALL: Status[] = ['RED', 'AMBER', 'GREEN']
@@ -258,6 +260,22 @@ export function Results(p: Props) {
           )}
         </div>
       )}
+      {p.checkSource === 'RULES_ONLY' && (
+        <div className="rounded-[14px] border border-border bg-surface p-4 text-sm" role="status" data-testid="offline-panel">
+          <p className="font-semibold">Checked by the playbook rules in this browser. No model was called.</p>
+          <p className="mt-1 text-text-secondary">Cloud review will add commentary when you are back online.</p>
+          <button
+            type="button"
+            className="btn mt-3 text-sm"
+            onClick={p.onRetryCheck}
+            disabled={!p.online || !p.cloudReviewAvailable}
+            data-testid="run-cloud-now"
+          >
+            Run cloud review now
+          </button>
+          {!p.online && <span className="hint ml-3">Available when you are back online.</span>}
+        </div>
+      )}
       {p.liveRetry?.swapped && !p.cached && (
         <p className="rounded-lg border border-green-solid bg-green-bg px-4 py-2.5 text-sm text-green-text" role="status" data-testid="live-swapped">
           Live result arrived and replaced the cached sample result.
@@ -284,7 +302,7 @@ export function Results(p: Props) {
           </button>
         </div>
       )}
-      {!p.cloudReviewAvailable && <p className="hint">Cloud review is not configured in this build, so only in-browser playbook rules are shown.</p>}
+      {!p.cloudReviewAvailable && p.checkSource !== 'RULES_ONLY' && <p className="hint">Cloud review is not configured in this build, so only in-browser playbook rules are shown.</p>}
 
       <ol className="space-y-3" aria-label="Findings" data-testid="findings">
         {visible.map((f, i) => (

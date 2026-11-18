@@ -1,23 +1,8 @@
 import type { SourceLabel, Status } from '../lib/types'
+import { RAW_SOURCE as RAW, sourceText } from '../lib/labels'
 import { IconAmber, IconChip, IconCloud, IconGreen, IconRed } from './icons'
 
-const RAW: Record<SourceLabel, string> = {
-  ON_DEVICE: 'on_device',
-  IN_CLOUD: 'in_cloud',
-  FIXTURE: 'none (bundled sample data, no model call)',
-  CACHED: 'none (bundled cached sample verdict)',
-}
-
-/** Plain-language label. The raw SDK value is kept in the title tooltip. */
-export function sourceText(source: SourceLabel, step: 'Extract' | 'Check', nanoMissing = false): string {
-  if (source === 'ON_DEVICE') return step === 'Extract' ? 'Extracted on this device (Gemini Nano)' : 'Checked on this device'
-  if (source === 'IN_CLOUD') {
-    if (step === 'Check') return 'Checked in the cloud'
-    return nanoMissing ? 'Extracted in the cloud. Gemini Nano is not on this device' : 'Extracted in the cloud'
-  }
-  if (source === 'CACHED') return 'Cached sample result'
-  return 'Sample data, no model call'
-}
+export { sourceText }
 
 /** Visible inferenceSource badge shown after every model call. */
 export function SourceBadge({ source, step, nanoMissing = false }: { source: SourceLabel; step: 'Extract' | 'Check'; nanoMissing?: boolean }) {

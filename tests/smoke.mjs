@@ -335,6 +335,57 @@ try {
     await page.close()
   }
 
+  // ---------- D) Item 1: offline rules-only verdict ----------
+  {
+    // Cloud check fails with a network TypeError (fake engine), not Judge Mode.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/app?fakeCheck=offline')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('approve').click()
+    await page.getByTestId('offline-panel').waitFor({ timeout: 10000 })
+    ok(JSON.stringify(await counts(page)) === '[3,6,0]', 'D(fakeCheck=offline): rules counts 3/6/0')
+    ok((await page.getByTestId('results-true-monthly').innerText()).includes('$1,961.95'), 'D(fakeCheck=offline): true monthly cost $1,961.95')
+    const badge = page.getByTestId('badge-Check')
+    ok((await badge.innerText()) === 'Offline: checked on this device' && (await badge.getAttribute('data-source')) === 'RULES_ONLY', 'D(fakeCheck=offline): badge "Offline: checked on this device"')
+    ok(!(await badge.innerText()).includes('ON_DEVICE') && (await page.locator('[data-testid="badge-Check"][data-source="ON_DEVICE"]').count()) === 0, 'D(fakeCheck=offline): check never labelled ON_DEVICE')
+    ok((await page.getByText('The cloud review failed.').count()) === 0, 'D(fakeCheck=offline): no red error')
+    ok((await page.getByTestId('run-cloud-now').count()) === 1, 'D(fakeCheck=offline): "Run cloud review now" exists')
+    await page.close()
+  }
+
+  {
+    // Real offline (no keys build): explore sample + approve gives a full rules-only verdict.
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+    const page = await ctx.newPage()
+    await page.goto('http://localhost:4317/app')
+    await page.getByTestId('setup-state').waitFor()
+    await ctx.setOffline(true)
+    await page.getByRole('button', { name: 'Explore with the sample extract' }).click()
+    await page.getByTestId('approve').click()
+    await page.getByTestId('offline-panel').waitFor({ timeout: 5000 })
+    ok(JSON.stringify(await counts(page)) === '[3,6,0]' && (await page.getByTestId('results-true-monthly').innerText()).includes('$1,961.95'), 'D(setOffline): explore sample gives 3/6/0 and $1,961.95 offline')
+    ok((await page.getByTestId('badge-Check').innerText()) === 'Offline: checked on this device', 'D(setOffline): offline badge shown')
+    ok(await page.getByTestId('run-cloud-now').isDisabled(), 'D(setOffline): "Run cloud review now" disabled while offline')
+    await ctx.close()
+  }
+
+  {
+    // Offline with no Nano (e2e fake reports unsupported): no consent banner, clear message.
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+    const page = await ctx.newPage()
+    await page.goto('http://localhost:4318/app')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await ctx.setOffline(true)
+    await page.getByTestId('extract').click()
+    await page.getByTestId('extract-error').waitFor()
+    ok((await page.getByTestId('consent-banner').count()) === 0 && (await page.getByTestId('extract-error').innerText()).includes('You are offline and this browser has no on-device model'), 'D(offline extract, no Nano): no consent banner, offline message')
+    await ctx.close()
+  }
+
 } finally {
   await browser.close()
   prod.kill()

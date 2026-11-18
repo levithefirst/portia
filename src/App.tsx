@@ -11,6 +11,7 @@ import { Landing } from './components/Landing'
 import type { AiEngine } from './lib/engine'
 import { missingEnv } from './lib/firebase'
 import { loadEngine } from './lib/getEngine'
+import { isNetworkError, isOnline, useOnline } from './lib/network'
 import { fileToGenerativePart } from './lib/intake'
 import { checkDeviceAvailability, type DeviceAvailability } from './lib/onDevice'
 import { getPlaybook, type Playbook } from './lib/playbooks'
@@ -88,6 +89,9 @@ function friendlyError(e: unknown): string {
   return msg
 }
 
+const OFFLINE_NO_NANO =
+  'You are offline and this browser has no on-device model, so Portia cannot read a new lease right now. Try the sample, or reconnect.'
+
 const STEPS: { id: Step; label: string }[] = [
   { id: 'intake', label: 'Document' },
   { id: 'review', label: 'Review extract' },
@@ -152,6 +156,7 @@ export default function App() {
   const oneClickStart = useRef<number | null>(null)
   const [oneClickBusy, setOneClickBusy] = useState(false)
   const [checkStartedAt, setCheckStartedAt] = useState<number | null>(null)
+  const online = useOnline()
 
   const [remember, setRemember] = useState(rememberEnabled())
   const [saved, setSaved] = useState<Remembered | null>(loadApproved())
@@ -234,6 +239,12 @@ export default function App() {
       setExtractError({ message: 'Paste the lease text or add at least one page photo first.' })
       return null
     }
+    // Offline without Gemini Nano: nothing can read a new lease. Do not offer cloud consent.
+    if (!isOnline() && avail !== 'available') {
+      setShowConsent(false)
+      setExtractError({ message: OFFLINE_NO_NANO })
+      return null
+    }
     // User gesture: start (or attach to) the on-device model, never at module load.
     if (avail === 'downloadable' && !preparing) void prepare()
     if (avail === 'available') {
@@ -310,8 +321,24 @@ export default function App() {
   }
 
   async function runCloudCheck(approved: LeaseExtract, ruleFindings: DisplayFinding[], ctx: CheckCtx) {
-    if (!engine) {
+    const useCache = judge && ctx.sample
+    /** Offline verdict: the in-browser rules already give tiles, costs and questions. No model call. */
+    const finishRulesOnly = (t0: number) => {
+      setFindings(ruleFindings)
+      setCheckSource('RULES_ONLY')
+      setCheckMs(performance.now() - t0)
+      setCheckError(null)
+      setChecking(false)
       finishOneClick()
+    }
+    if (!engine) {
+      if (!isOnline()) finishRulesOnly(performance.now())
+      finishOneClick()
+      return
+    }
+    if (!useCache && !isOnline()) {
+      checkRun.current++
+      finishRulesOnly(performance.now())
       return
     }
     const runId = ++checkRun.current
@@ -335,13 +362,15 @@ export default function App() {
     const live = runCheck(engine, approved, ctx.playbook, ctx.unsure)
 
     // Cached fallback is allowed ONLY in Judge Mode and ONLY for the bundled sample lease.
-    const useCache = judge && ctx.sample
     if (!useCache) {
       try {
         const out = await live
         if (current()) applyLive(out)
       } catch (e) {
-        if (current()) setCheckError(e instanceof ParseError ? `${e.message} Retry to ask again.` : friendlyError(e))
+        if (current()) {
+          if (isNetworkError(e) || !isOnline()) finishRulesOnly(t0)
+          else setCheckError(e instanceof ParseError ? `${e.message} Retry to ask again.` : friendlyError(e))
+        }
       } finally {
         if (current()) {
           setChecking(false)
@@ -798,6 +827,7 @@ export default function App() {
                     error={prepError}
                     onPrepare={prepare}
                     aiReady={aiReady}
+                    online={online}
                   />
                   <div className="paper p-4 text-sm">
                     <p className="eyebrow">Why this matters</p>
@@ -879,6 +909,7 @@ export default function App() {
                 }
                 onStartOver={startOver}
                 cloudReviewAvailable={aiReady}
+                online={online}
               />
             )}
           </div>

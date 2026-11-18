@@ -20,7 +20,7 @@ declare global {
   }
 }
 
-/** ?fakeCheck=fail -> every check throws a 429. ?fakeCheck=slow -> first check takes 9 s. */
+/** ?fakeCheck=fail -> every check throws a 429. slow -> first check takes 9 s. offline -> network TypeError. */
 function checkMode(): string {
   return new URLSearchParams(location.search).get('fakeCheck') ?? 'ok'
 }
@@ -71,6 +71,10 @@ export const fakeEngine: AiEngine = {
     record({ kind: 'check', prompt, imageCount: 0 })
     const mode = checkMode()
     checkCount++
+    if (mode === 'offline') {
+      await new Promise((r) => setTimeout(r, 100))
+      throw new TypeError('Failed to fetch')
+    }
     if (mode === 'fail') {
       await new Promise((r) => setTimeout(r, 300))
       throw new Error('[GoogleGenerativeAI Error]: 429 RESOURCE_EXHAUSTED (fake)')
