@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { cleanExtract } from '../lib/pipeline'
-import { formatMoney, monthlyRent, totalMonthlyFees, dueAtSigning } from '../lib/rules'
+import { formatMoney, monthlyRent, totalMonthlyFees, dueAtSigning, hasCurrency, NO_CURRENCY_NOTE } from '../lib/rules'
 import type { LeaseExtract, MandatoryFee, OtherMoneyTerm, ScalarField, SourceLabel } from '../lib/types'
 import { SourceBadge } from './Badges'
 import { IconPlus, IconX } from './icons'
@@ -258,10 +258,15 @@ export function ExtractEditor(p: Props) {
               </dd>
             </div>
             <div className="flex justify-between gap-3 pt-2">
-              <dt className="text-text-secondary">Due at signing (deposit + first month with required fees)</dt>
+              <dt className="text-text-secondary">Due at signing (deposit + move-in fees + first month with required fees)</dt>
               <dd className="font-mono" data-testid="due-at-signing">{rent ? formatMoney(dueAtSigning(x), x.currency) : 'n/a'}</dd>
             </div>
           </dl>
+          {!hasCurrency(x) && (
+            <p className="hint mt-3" data-testid="no-currency">
+              {NO_CURRENCY_NOTE}
+            </p>
+          )}
         </div>
   )
 

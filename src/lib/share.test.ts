@@ -15,7 +15,7 @@ describe('share text for the landlord questions', () => {
 
   it('has the sample cost math from the rules', () => {
     expect(text).toContain('rent $1,850.00 + required fees $111.95 = $1,961.95')
-    expect(text).toContain('Due at signing: $6,586.95.')
+    expect(text).toContain('Due at signing: $6,931.95.')
   })
 
   it('lists 9 or fewer numbered questions', () => {

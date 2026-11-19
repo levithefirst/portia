@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Playbook } from '../lib/playbooks'
 import { findRule } from '../lib/playbooks'
-import { formatMoney, monthlyRent, sortFindings, totalMonthlyFees } from '../lib/rules'
+import { dueAtSigning, formatMoney, hasCurrency, monthlyRent, NO_CURRENCY_NOTE, sortFindings, totalMonthlyFees } from '../lib/rules'
 import type { DisplayFinding, LeaseExtract, SourceLabel, Status } from '../lib/types'
 import { SourceBadge, StatusPill, statusLabel } from './Badges'
 import { IconCopy, IconPrint } from './icons'
@@ -9,7 +9,7 @@ import { LogoMark } from './Shell'
 import { verdictTimeText } from '../lib/judge'
 import type { ReceiptStep } from '../lib/receipt'
 import { Receipt } from './Receipt'
-import { mailtoHref, shareText } from '../lib/share'
+import { costLine, mailtoHref, shareText } from '../lib/share'
 
 export interface CachedInfo {
   reason: string
@@ -159,8 +159,8 @@ export function Results(p: Props) {
 
   const total = rules.length
   return (
-    <section aria-labelledby="results-title" className="space-y-5">
-      <div className="paper overflow-hidden p-4 sm:p-6">
+    <section aria-labelledby="results-title" className="results-print space-y-5">
+      <div className="results-summary paper overflow-hidden p-4 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div>
             <p className="eyebrow">
@@ -201,6 +201,11 @@ export function Results(p: Props) {
                   ({formatMoney(rent, p.extract.currency)} rent + {formatMoney(fees, p.extract.currency)} required fees)
                 </span>
               </p>
+              <p className="border-t border-current/15 pt-2 font-mono text-[0.75rem] muted" data-testid="results-due-at-signing">
+                Due at signing: <strong className="text-[0.95rem]">{formatMoney(dueAtSigning(p.extract), p.extract.currency)}</strong>{' '}
+                <span className="block sm:inline">(deposit + move-in fees + first month)</span>
+              </p>
+              {!hasCurrency(p.extract) && <p className="font-mono text-[0.7rem] muted">{NO_CURRENCY_NOTE}</p>}
             </div>
           ) : null}
 
@@ -384,6 +389,11 @@ export function Results(p: Props) {
           </ol>
         ) : (
           <p className="hint mt-2">No red or amber findings, so no questions yet.</p>
+        )}
+        {costLine(p.extract) && (
+          <p className="print-only mt-4 text-sm" data-testid="print-cost">
+            {costLine(p.extract)}
+          </p>
         )}
         <p className="print-only mt-4 text-xs">
           <span className="mr-2 inline-block align-middle">

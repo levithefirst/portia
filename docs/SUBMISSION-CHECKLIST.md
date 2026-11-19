@@ -97,4 +97,4 @@ Copy note: the requested strings with an em dash are rendered with a colon or fu
 | 9d | Spanish toggle | | **Skipped**: a partial translation of the tool path would have been half-built UI |
 | 10 | Docs ordered by the four criteria | `README.md`, `docs/DEVPOST.md` | Done |
 
-Canonical sample numbers unchanged: 3 red / 6 amber / 0 green, rent $1,850, required fees $111.95, true monthly cost $1,961.95, due at signing $6,586.95.
+Canonical sample numbers unchanged: 3 red / 6 amber / 0 green, rent $1,850, required fees $111.95, true monthly cost $1,961.95, due at signing $6,931.95 (was $6,586.95 in v1.0.0-devpost, which left out the clause 5 move-in fees).

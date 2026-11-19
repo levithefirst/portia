@@ -10,7 +10,7 @@ Every Judge Mode run of the unmodified bundled sample shows the same result, bec
 | Rent | $1,850.00 / month |
 | Required fees | $111.95 / month (Technology Package $45, Community Amenity $35, Valet Trash $25, Utility Billing Admin $6.95) |
 | True monthly cost | **$1,961.95** |
-| Due at signing | **$6,586.95** (deposit $4,625 + first month with required fees) |
+| Due at signing | **$6,931.95** (deposit $4,625 + move-in fees $250 + $95 + first month with required fees $1,961.95). Shown on the clause map and in copy, email and print |
 | Red | Grace period (0 days), security deposit (2.5 months), mandatory fees (junk-fee patterns) |
 | Amber | Late fee (8.1% of rent), auto-renewal, notice period (90 days), repairs pushed to tenant, early termination penalty, possible waiver clause |
 
