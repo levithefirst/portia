@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PLAYBOOKS, getPlaybook } from './playbooks'
-import { monthlyRent, runPlaybook, totalMonthlyFees } from './rules'
+import { dueAtSigning, monthlyRent, runPlaybook, signingTerms, totalMonthlyFees } from './rules'
 import sample from '../fixtures/sample-extract.json'
 import type { LeaseExtract } from './types'
 
@@ -59,5 +59,41 @@ describe('fixture lease against the US-typical playbook', () => {
 describe('yearly rent (Lagos style)', () => {
   it('normalises yearly rent to monthly', () => {
     expect(monthlyRent({ rentAmount: 1_200_000, rentPeriod: 'yearly' })).toBe(100_000)
+  })
+})
+
+describe('due at signing', () => {
+  it('includes the clause 5 move-in fees ($250 admin + $95 lease prep) for the sample', () => {
+    expect(signingTerms(x).map((t) => t.name)).toEqual(['Administrative Processing Fee', 'Lease Preparation Fee'])
+    // 4,625 deposit + 250 + 95 + 1,850 rent + 111.95 required monthly fees
+    expect(dueAtSigning(x)).toBeCloseTo(6931.95)
+  })
+
+  it('never counts conditional or recurring other terms', () => {
+    const y: LeaseExtract = {
+      rentAmount: 1000,
+      otherMoneyTerms: [
+        { name: 'Daily Late Fee', amount: 20, notes: 'Additional daily late charge until paid.' },
+        { name: 'Pet Rent', amount: 50, notes: 'Monthly fee per pet if approved.' },
+        { name: 'Unauthorized Occupant Fee', amount: 25, notes: 'Per day charge for unauthorized occupants.' },
+        { name: 'Key Replacement', amount: 75, notes: 'If keys are lost.' },
+      ],
+    }
+    expect(signingTerms(y)).toEqual([])
+    expect(dueAtSigning(y)).toBe(1000)
+  })
+
+  it('counts terms the lease says are due at signing or at move-in, once', () => {
+    const y: LeaseExtract = {
+      rentAmount: 1000,
+      depositAmount: 1000,
+      mandatoryFees: [{ name: 'Admin Fee', amount: 100, frequency: 'one-time' }],
+      otherMoneyTerms: [
+        { name: 'Admin Fee', amount: 100, notes: 'Due at signing.' },
+        { name: 'Application Fee', amount: 40, notes: 'Payable upon signing.' },
+        { name: 'Move-in fee', amount: 60, notes: 'Due at move-in.' },
+      ],
+    }
+    expect(dueAtSigning(y)).toBe(1000 + 100 + 40 + 60 + 1000)
   })
 })

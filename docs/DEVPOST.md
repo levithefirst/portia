@@ -13,7 +13,7 @@ Replace `<YOUTUBE_URL>` before submitting. Platform: **Web (Chrome)**.
 - Code: https://github.com/levithefirst/portia (Apache-2.0)
 - Video: <YOUTUBE_URL>
 
-The sample lease advertises $1,850 a month. Once its required technology, amenity, valet trash and billing fees are added, it really costs **$1,961.95 a month**, and **$6,586.95 is due at signing**. Portia finds that for any rental agreement: it turns the lease into a fee map, does the true-cost math, and flags the terms worth asking about before you sign. The lease is read on your device when Gemini Nano is available, and the cloud only ever sees the numbers you approve.
+The sample lease advertises $1,850 a month. Once its required technology, amenity, valet trash and billing fees are added, it really costs **$1,961.95 a month**, and **$6,931.95 is due at signing** (deposit, the $250 and $95 move-in fees, and the first month with required fees). Portia finds that for any rental agreement: it turns the lease into a fee map, does the true-cost math, and flags the terms worth asking about before you sign. The lease is read on your device when Gemini Nano is available, and the cloud only ever sees the numbers you approve.
 
 ## Potential Impact
 
@@ -49,7 +49,7 @@ Playbooks: US-typical, England & Wales (Tenant Fees Act 2019 patterns), Lagos (L
 
 - One flow: add the lease (paste, PDF or photos), review the fee map with the true-cost math up front, approve, and get the clause map with a playbook citation and an "Ask the landlord" question on every flag.
 - **Judge Mode** (`/?judge=1`): one click runs the bundled sample end to end and times it. If the live cloud check is unavailable for the sample, a clearly labelled cached sample result appears while it keeps retrying.
-- The question list copies in one click, opens as an email draft with no recipient, or prints and saves as PDF.
+- The question list copies in one click, opens as an email draft with no recipient, or prints and saves as PDF. Copy, email and print all include the true monthly cost and the amount due at signing.
 - While the cloud review runs, the counts are labelled "Preliminary" so a half-finished result never looks final.
 - Light and dark themes, phone layout, an installable app shell, a social preview image, keyboard focus on the result, and screen reader announcements of the final counts.
 
@@ -69,4 +69,4 @@ Portia flags patterns from a curated static playbook with hedged notes and publi
 
 ## Testing instructions
 
-Open https://askportia.vercel.app/?judge=1 in Chrome. No login. Press the one button ("Run the sample lease", or on a browser without Gemini Nano "Send the sample to cloud Gemini and check", which is the consent). You get the clause map: 3 red, 6 amber, 0 green, true monthly cost $1,961.95, $6,586.95 due at signing, the privacy receipt, and a `Verdict in X.Xs` line with the time measured on your machine. If the live cloud check is unavailable for the sample lease you will see a clearly labelled cached sample result while it retries. For the manual path, open https://askportia.vercel.app/app?judge=0, load the sample (or a PDF, or paste your own lease), extract, edit a field, approve and check, then copy, email or print the questions. To test on-device, use desktop Chrome 139+ with the flags in the README and click **Prepare on-device model** first.
+Open https://askportia.vercel.app/?judge=1 in Chrome. No login. Press the one button ("Run the sample lease", or on a browser without Gemini Nano "Send the sample to cloud Gemini and check", which is the consent). You get the clause map: 3 red, 6 amber, 0 green, true monthly cost $1,961.95, $6,931.95 due at signing, the privacy receipt, and a `Verdict in X.Xs` line with the time measured on your machine. If the live cloud check is unavailable for the sample lease you will see a clearly labelled cached sample result while it retries. For the manual path, open https://askportia.vercel.app/app?judge=0, load the sample (or a PDF, or paste your own lease), extract, edit a field, approve and check, then copy, email or print the questions. To test on-device, use desktop Chrome 139+ with the flags in the README and click **Prepare on-device model** first.

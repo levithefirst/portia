@@ -39,11 +39,36 @@ export function oneTimeFees(x: LeaseExtract): number {
   }, 0)
 }
 
-/** Due at signing: deposit + one-time required fees + the first month with required monthly fees. */
+const AT_SIGNING = /\b(at|upon|on|before) (lease )?signing\b|\b(due|payable|paid) (at|on|upon|before) move[- ]?in\b|\bmove[- ]?in (fee|charge|cost)s?\b|\bnon-?refundable (move[- ]?in|application|admin|administrative|processing|lease)/i
+const CONDITIONAL = /\b(per (day|night|week|month|pet|occurrence|incident)|daily|weekly|monthly|if |when |unless|late|unauthori[sz]ed|optional|refundable deposit)\b/i
+
+/**
+ * Other money terms that the lease requires at signing (for example "a
+ * non-refundable Administrative Processing Fee of $250.00 ... at signing").
+ * Conditional or recurring charges (late fees, per-day fees, pet rent) never count.
+ */
+export function signingTerms(x: LeaseExtract): NonNullable<LeaseExtract['otherMoneyTerms']> {
+  const onceNames = new Set((x.mandatoryFees ?? []).map((f) => (f.name ?? '').trim().toLowerCase()))
+  return (x.otherMoneyTerms ?? []).filter((t) => {
+    if (typeof t.amount !== 'number' || t.amount <= 0) return false
+    if (onceNames.has((t.name ?? '').trim().toLowerCase())) return false
+    const text = `${t.name ?? ''} ${t.notes ?? ''}`
+    return AT_SIGNING.test(text) && !CONDITIONAL.test(text)
+  })
+}
+
+export function signingTermsTotal(x: LeaseExtract): number {
+  return signingTerms(x).reduce((s, t) => s + (t.amount ?? 0), 0)
+}
+
+/**
+ * Due at signing: deposit + one-time required fees + other money terms the lease
+ * requires at signing + the first month with required monthly fees.
+ */
 export function dueAtSigning(x: LeaseExtract): number | undefined {
   const rent = monthlyRent(x)
   if (!rent) return undefined
-  return (x.depositAmount ?? 0) + oneTimeFees(x) + rent + totalMonthlyFees(x)
+  return (x.depositAmount ?? 0) + oneTimeFees(x) + signingTermsTotal(x) + rent + totalMonthlyFees(x)
 }
 
 export function formatMoney(n: number | undefined, currency?: string): string {
@@ -56,8 +81,16 @@ export function formatMoney(n: number | undefined, currency?: string): string {
   } catch {
     /* fall through */
   }
-  return n.toLocaleString('en', { maximumFractionDigits: 2 })
+  // No currency in the extract: show a plain amount with two decimals, and let the UI label it.
+  return n.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
+
+/** True when the extract has a usable ISO 4217 currency code. */
+export function hasCurrency(x: LeaseExtract): boolean {
+  return /^[A-Z]{3}$/.test((x.currency ?? '').toUpperCase())
+}
+
+export const NO_CURRENCY_NOTE = 'No currency found in the lease, so amounts are shown as plain numbers. Add the currency code in the Currency field.'
 
 function fieldText(x: LeaseExtract, field: string): string {
   const v = (x as Record<string, unknown>)[field]

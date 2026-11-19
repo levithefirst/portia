@@ -11,15 +11,17 @@ import { LogoMark, navigate } from './Shell'
 
 const reduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** Counts up to the final value. The final value is what renders first and what stays if motion is reduced. */
+/**
+ * Counts up to the final value. It starts at the first step (no jump from the final value back down,
+ * which caused layout shift), and shows the final value at once if motion is reduced.
+ */
 function useCountTo(steps: number[], startDelay: number, stepMs: number) {
   const final = steps[steps.length - 1]
-  const [v, setV] = useState(final)
+  const [v, setV] = useState(() => (reduced() ? final : steps[0]))
   useEffect(() => {
     if (reduced()) return
     let raf = 0
     const t0 = performance.now() + startDelay
-    setV(steps[0])
     const tick = (now: number) => {
       const t = now - t0
       if (t < 0) return void (raf = requestAnimationFrame(tick))
@@ -118,7 +120,7 @@ function Hero({ money }: { money: (v: number) => string }) {
             See a sample verdict
           </a>
         </div>
-        <p className="mt-5 hidden font-mono text-[0.72rem] text-text-secondary sm:block">No account · pasted text or page photos · not legal advice</p>
+        <p className="mt-5 font-mono text-[0.72rem] text-text-secondary">No account · pasted text or page photos · not legal advice</p>
       </div>
 
       <div className="lp-scan relative">
@@ -140,7 +142,7 @@ function Hero({ money }: { money: (v: number) => string }) {
           </div>
           <div className="scan-receipt relative mt-[-3.5rem] ml-auto w-[min(92%,20rem)] rounded-2xl p-4 sm:p-5 lg:absolute lg:right-[-0.5rem] lg:bottom-[-4.5rem] lg:mt-0">
             <p className="muted font-mono text-[0.62rem] uppercase tracking-[0.1em]">True monthly cost · sample lease</p>
-            <p className="cost-figure mt-2 text-[2.3rem] sm:text-[2.9rem]" data-testid="hero-total" aria-label={`${money(steps[steps.length - 1])} a month`}>
+            <p className="cost-figure mt-2 text-[2.3rem] tabular-nums sm:text-[2.9rem]" data-testid="hero-total" aria-label={`${money(steps[steps.length - 1])} a month`}>
               {money(v)}
             </p>
             <ul className="mt-3 hidden space-y-1 font-mono text-[0.7rem] sm:block">
@@ -182,8 +184,8 @@ function Problem({ rent, total }: { rent: string; total: string }) {
 }
 function Fig({ n, t, src }: { n: string; t: string; src: string }) {
   return (
-    <div>
-      <p className="cost-figure text-[3.4rem] sm:text-[4.2rem]">{n}</p>
+    <div className="min-w-0">
+      <p className="cost-figure text-[3.4rem] sm:text-[4.2rem] md:text-[clamp(2.5rem,5.2vw,4.2rem)]">{n}</p>
       <p className="mt-3 max-w-[34ch] leading-relaxed">{t}</p>
       <p className="muted mt-2 font-mono text-[0.7rem]">{src}</p>
     </div>

@@ -161,7 +161,7 @@ To exercise the real cloud path locally, put real values in `.env`, run `npm run
 ## Milestone acceptance
 
 **M0** SDK notes pin `firebase@13.3.0` and quote the live flag and default model (`docs/SDK-NOTES.md`); handoff checklist exists; no invented flags, keys or SDK names.
-**M1** `npm ci` works; tokens in `src/styles.css` (Tailwind default palette removed); Apache-2.0 `LICENSE`; `vercel.json` rewrites; `.env` gitignored, `.env.example` blank; repo private.
+**M1** `npm ci` works; tokens in `src/styles.css` (Tailwind default palette removed); Apache-2.0 `LICENSE`; `vercel.json` rewrites; `.env` gitignored, `.env.example` blank; repo public (Apache-2.0) since the Devpost submission.
 **M2** Build succeeds without secrets; Load Sample > Extract > edit > Approve & check implemented; badges on extract and check; consent banner before any cloud extract; PDF rejected (since Addendum 4, PDFs are parsed in the browser instead); "Not legal advice" visible; check payload is approved JSON only.
 **M3** Multi-page photos (up to 3 per turn, batch merge beyond); unclear fields flagged and still approvable; playbook citation per finding; printable question list; recoverable errors with retry; smoke test runnable; privacy copy matches code.
 **M4** Finished UI (light/dark/phone); remember toggle off by default, JSON only; demo script, Devpost text, submission checklist, refreshed handoff.

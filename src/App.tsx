@@ -34,6 +34,7 @@ import {
   isJudgeMode,
   isRecordMode,
   JUDGE_RETRY_DELAYS_MS,
+  countFilled,
   isThinExtract,
   LIVE_FAILED_NOTE,
   matchSample,
@@ -108,13 +109,18 @@ const STEPS: { id: Step; label: string }[] = [
   { id: 'results', label: 'Clause map' },
 ]
 
+const TITLES: Record<Route, string> = {
+  home: 'Portia: see what a lease really costs before you sign',
+  check: 'Check a lease · Portia',
+  privacy: 'How your data flows · Portia',
+  eval: 'Accuracy eval · Portia',
+}
+
 export default function App() {
   const [route, setRoute] = useState<Route>(routeFromPath())
   useEffect(() => {
-    const on = () => setRoute(routeFromPath())
-    window.addEventListener('popstate', on)
-    return () => window.removeEventListener('popstate', on)
-  }, [])
+    document.title = TITLES[route]
+  }, [route])
 
   const [engine, setEngine] = useState<AiEngine | null | undefined>(undefined)
   const [avail, setAvail] = useState<DeviceAvailability | 'checking'>('checking')
@@ -233,6 +239,38 @@ export default function App() {
 
   const step2Ready = extract !== null
 
+  // Flow steps are history entries, so Back and Forward move between Document, Review and Clause map
+  // instead of leaving the tool or restoring a stale screen.
+  const latest = useRef({ extract, findings, step })
+  latest.current = { extract, findings, step }
+  const stepFromHistory = useRef(false)
+  useEffect(() => {
+    const on = (e: PopStateEvent) => {
+      const r = routeFromPath()
+      setRoute(r)
+      const want = (e.state as { portiaStep?: Step } | null)?.portiaStep
+      if (r !== 'check' || !want) return
+      const { extract: x, findings: f, step: now } = latest.current
+      const next: Step = want === 'intake' || !x ? 'intake' : want === 'results' && !f.length ? 'review' : want
+      if (next === now) return
+      stepFromHistory.current = true
+      setStep(next)
+    }
+    window.addEventListener('popstate', on)
+    return () => window.removeEventListener('popstate', on)
+  }, [])
+  useEffect(() => {
+    if (route !== 'check') return
+    if (stepFromHistory.current) {
+      stepFromHistory.current = false
+      return
+    }
+    const cur = (history.state as { portiaStep?: Step } | null)?.portiaStep
+    if (cur === step) return
+    if (cur === undefined) history.replaceState({ ...(history.state ?? {}), portiaStep: step }, '')
+    else history.pushState({ portiaStep: step }, '')
+  }, [step, route])
+
   async function prepare() {
     if (!engine) return
     setPreparing(true)
@@ -312,6 +350,22 @@ export default function App() {
     try {
       const images = await Promise.all(batchPages.map((p) => fileToGenerativePart(p.file)))
       let out = await runExtract(engine, { leaseText: text, images, cloudConsent: consent })
+      // Your own documents: a near-empty extract (a flaky model run) is retried once, with the
+      // same consent, before the "missing too many fields" warning. Values are never substituted.
+      let thinRetryNote: string | null = null
+      if (!judge || !sampleNow) {
+        if (!batchMode && getConfig().extractThinRetry && isThinExtract(out.extract)) {
+          try {
+            const again = await runExtract(engine, { leaseText: text, images, cloudConsent: consent })
+            if (countFilled(again.extract).filled > countFilled(out.extract).filled) out = again
+            if (out.source === 'IN_CLOUD') {
+              thinRetryNote = 'The first cloud extract came back incomplete, so Portia sent the same document once more with the consent you gave.'
+            }
+          } catch {
+            /* keep the first result and show the warning */
+          }
+        }
+      }
       let next = batchMode && extract ? mergeExtracts(extract, out.extract) : out.extract
       let pinInfo: PinInfo | null = null
       if (judge && sampleNow && !batchMode) {
@@ -342,6 +396,7 @@ export default function App() {
       setShowConsent(false)
       setBatchMode(false)
       setStep('review')
+      if (thinRetryNote) setNotice(thinRetryNote)
       if (out.source === 'IN_CLOUD' && !consent) {
         setNotice('The SDK reported this extract ran in the cloud even though the on-device model was ready.')
       }

@@ -83,7 +83,8 @@ export function extractStep(a: { ranOn: SourceLabel; raw?: string; ms: number; p
     sentToCloud: cloud
       ? {
           kind: 'lease-text-and-images',
-          chars: normalise(a.leaseText).length,
+          // Exactly the characters placed in the prompt (buildExtractPrompt trims the text), so it matches the editor counter.
+          chars: a.leaseText.trim().length,
           bytes: utf8Bytes(a.prompt),
           imageCount: a.images.length,
           imageBytes: a.images.reduce((s, p) => s + imagePartBytes(p), 0),
