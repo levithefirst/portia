@@ -155,7 +155,7 @@ export function Intake(p: Props) {
             aria-describedby="lease-text-hint"
           />
           <p id="lease-text-hint" className="hint mt-1.5 font-mono">
-            {p.leaseText.length.toLocaleString()} characters · about {tokens.toLocaleString()} tokens with selected pages
+            {p.leaseText.trim().length.toLocaleString('en')} characters · about {tokens.toLocaleString()} tokens with selected pages
           </p>
           {(overBudget || huge) && (
             <p className="mt-2 rounded-lg border border-amber-solid bg-amber-bg px-3 py-2 text-sm text-amber-text" role="status">

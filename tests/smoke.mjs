@@ -146,6 +146,24 @@ try {
     ok(callsBefore === 0, 'B: consent banner shown and NO model call made before consent')
     await axe(page, 'consent banner')
 
+    // P0: Cancel on the consent banner sends nothing, now or later.
+    const aiReqB = []
+    page.on('request', (r) => {
+      if (/firebasevertexai|generativelanguage|aiplatform/.test(r.url())) aiReqB.push(r.url())
+    })
+    await page.getByTestId('consent-banner').getByRole('button', { name: 'Cancel' }).click()
+    await page.waitForTimeout(1500)
+    ok(
+      (await page.getByTestId('consent-banner').count()) === 0 &&
+        (await page.evaluate(() => (window.__portiaCalls ?? []).length)) === 0 &&
+        aiReqB.length === 0,
+      'B(P0): Cancel closes the banner and makes zero model calls and zero AI requests',
+    )
+    ok((await page.getByTestId('extract').count()) === 1, 'B(P0): after Cancel the Extract button is back and nothing was extracted')
+    await page.getByTestId('extract').click()
+    await page.getByTestId('consent-banner').waitFor()
+    ok((await page.evaluate(() => (window.__portiaCalls ?? []).length)) === 0, 'B(P0): Extract after Cancel asks for consent again')
+
     await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
     await page.getByTestId('badge-Extract').waitFor()
     ok((await page.getByTestId('badge-Extract').getAttribute('data-source')) === 'IN_CLOUD', 'B: extract badge source is IN_CLOUD after consent')
@@ -287,6 +305,46 @@ try {
   }
 
   {
+    // Manual path, flaky cloud extract (first result thin): retried once automatically, no warning.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/app?judge=0&fakeExtract=thinonce')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('approve').waitFor()
+    const n = await page.evaluate(() => window.__portiaCalls.filter((c) => c.kind === 'extract').length)
+    ok(n === 2 && (await page.getByTestId('thin-warning').count()) === 0 && !(await page.getByTestId('approve').isDisabled()), `C(thin once manual): near-empty extract auto-retried once (${n} calls), full map shown`)
+    ok((await page.getByText('sent the same document once more').count()) === 1, 'C(thin once manual): retry is disclosed in a notice')
+    await page.close()
+  }
+
+  {
+    // Flow steps are history entries: Back from the clause map returns to the review, then the document.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await page.goto('http://localhost:4318/app?judge=0')
+    await page.getByRole('button', { name: 'Load sample lease' }).click()
+    await page.waitForFunction(() => document.querySelector('#lease-text')?.value.length > 100)
+    await page.getByTestId('extract').click()
+    await page.getByRole('button', { name: 'Send to cloud Gemini' }).click()
+    await page.getByTestId('approve').click()
+    await page.getByTestId('verdict-time').waitFor()
+    ok((await page.getByTestId('results-due-at-signing').innerText()).includes('$6,931.95'), 'H: clause map shows due at signing $6,931.95')
+    ok((await page.title()) === 'Check a lease · Portia', 'H: tool route has its own title')
+    const cur = () => page.evaluate(() => document.querySelector('[aria-current=step]')?.textContent ?? '')
+    await page.goBack()
+    await page.getByTestId('approve').waitFor()
+    ok((await cur()).includes('Review extract'), 'H: Back from the clause map returns to the review')
+    await page.goBack()
+    await page.getByTestId('extract').waitFor()
+    ok((await cur()).includes('Document'), 'H: Back again returns to the document')
+    await page.goForward()
+    await page.getByTestId('approve').waitFor()
+    ok((await cur()).includes('Review extract'), 'H: Forward returns to the review')
+    await page.close()
+  }
+
+  {
     // Judge Mode, non-sample document, cloud failing: real error, never a cached result.
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
     await page.goto('http://localhost:4318/?judge=1&fakeCheck=fail')
@@ -331,7 +389,7 @@ try {
       ['cost-panel', 'approve', 'due-at-signing'].every((id) => document.querySelector(`[data-testid="${id}"]`).getBoundingClientRect().bottom <= window.innerHeight),
     )
     ok(inFold, 'C(1280x800): review fold shows the cost panel and Approve')
-    ok((await page.getByTestId('due-at-signing').innerText()) === '$6,586.95', 'C(1280x800): due at signing $6,586.95')
+    ok((await page.getByTestId('due-at-signing').innerText()) === '$6,931.95', 'C(1280x800): due at signing $6,931.95')
     await page.close()
   }
 
