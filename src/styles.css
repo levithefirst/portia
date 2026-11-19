@@ -83,12 +83,31 @@
   --band-muted: #bdbab0;
 }
 
+/* Metric-matched fallbacks, so the web-font swap does not re-wrap the hero (desktop CLS 0.18).
+   Times New Roman and Liberation Serif share metrics; Arial and Liberation Sans share metrics. */
+@font-face {
+  font-family: "Newsreader Fallback";
+  src: local("Times New Roman"), local("TimesNewRomanPSMT"), local("Liberation Serif"), local("Tinos");
+  size-adjust: 112%;
+  ascent-override: 66%;
+  descent-override: 24%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Geist Fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 99%;
+  ascent-override: 102%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+}
+
 @theme {
   --color-*: initial;
   --font-*: initial;
-  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-serif: "Newsreader", ui-serif, Georgia, serif;
+  --font-serif: "Newsreader", "Newsreader Fallback", ui-serif, Georgia, serif;
 }
 
 @theme inline {
@@ -480,6 +499,48 @@
   .print-only {
     display: block !important;
   }
+  /* Compact print layout so the summary and the first findings share page 1 (no half-blank first page). */
+  @page {
+    margin: 12mm;
+  }
+  .paper {
+    padding: 0.75rem 1rem !important;
+  }
+  .finding {
+    padding: 0.6rem 0.9rem !important;
+  }
+  .finding h3 {
+    margin-top: 0.35rem;
+    font-size: 1.05rem;
+  }
+  .cost-band {
+    padding: 0.6rem 0.9rem !important;
+    gap: 0.4rem;
+  }
+  .cost-figure {
+    font-size: 2rem !important;
+  }
+  .tile {
+    padding: 0.4rem 0.6rem !important;
+  }
+  .map-strip {
+    display: none;
+  }
+  /* Print order: the cost summary, then the landlord questions (they can flow across pages), then the findings. */
+  .results-print {
+    display: flex;
+    flex-direction: column;
+  }
+  .results-print > [data-testid="questions"] {
+    order: -1;
+  }
+  .results-print > .results-summary {
+    order: -2;
+  }
+  [data-testid="findings"] > * + *,
+  [data-testid="commentary"] ol > * + * {
+    margin-top: 0.5rem !important;
+  }
 }
 .print-only {
   display: none;
@@ -526,7 +587,9 @@
   }
   .lp-cta .lp-arrow { display: inline-block; transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
   .lp-cta:hover .lp-arrow { transform: translateX(4px); }
-  .bleed { width: 100vw; margin-left: calc(50% - 50vw); }
+  /* Full-bleed band without 100vw (which counts the scrollbar and overflowed at 768px): the box stays
+     inside the layout and its background is painted out to the viewport edges. */
+  .bleed { width: 100%; box-shadow: 0 0 0 100vmax var(--band-bg); clip-path: inset(0 -100vmax); }
   .ink-band { background: var(--band-bg); color: var(--band-ink); }
   .ink-band .muted, .ink-band .eyebrow { color: var(--band-muted); }
   .ink-rule { border-top: 1px solid color-mix(in srgb, var(--band-ink) 16%, transparent); }
