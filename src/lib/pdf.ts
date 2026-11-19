@@ -15,7 +15,44 @@ export type PdfResult =
   | { kind: 'text'; text: string; pageCount: number }
   | { kind: 'scanned'; images: File[]; pageCount: number; skippedPages: number }
 
+/**
+ * pdfjs-dist 6 calls Map/WeakMap.prototype.getOrInsertComputed (a recent JS addition). Older
+ * Chromium builds lack it, which broke scanned-PDF rendering there. Tiny spec-shaped polyfill.
+ */
+function polyfillGetOrInsert() {
+  for (const C of [Map, WeakMap] as unknown as { prototype: Record<string, unknown> }[]) {
+    const proto = C.prototype as {
+      has(k: unknown): boolean
+      get(k: unknown): unknown
+      set(k: unknown, v: unknown): unknown
+      getOrInsert?: (k: unknown, v: unknown) => unknown
+      getOrInsertComputed?: (k: unknown, f: (k: unknown) => unknown) => unknown
+    }
+    if (!proto.getOrInsert) {
+      Object.defineProperty(proto, 'getOrInsert', {
+        configurable: true,
+        writable: true,
+        value(this: typeof proto, k: unknown, v: unknown) {
+          if (!this.has(k)) this.set(k, v)
+          return this.get(k)
+        },
+      })
+    }
+    if (!proto.getOrInsertComputed) {
+      Object.defineProperty(proto, 'getOrInsertComputed', {
+        configurable: true,
+        writable: true,
+        value(this: typeof proto, k: unknown, f: (k: unknown) => unknown) {
+          if (!this.has(k)) this.set(k, f(k))
+          return this.get(k)
+        },
+      })
+    }
+  }
+}
+
 async function loadPdfjs() {
+  polyfillGetOrInsert()
   const [pdfjs, worker] = await Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')])
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default
   return pdfjs

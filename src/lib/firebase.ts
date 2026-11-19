@@ -107,7 +107,8 @@ export function getModels(): PortiaModels {
   const cloudModel = getConfig().cloudModel
 
   // 1) Extract: on-device first. Structured JSON on both sides per the hybrid docs.
-  //    Portia never lets this model fall back to the cloud silently: see lib/gate.ts.
+  //    Portia never lets this model fall back to the cloud silently: the consent gate is
+  //    runExtract() in lib/pipeline.ts, using willRunOnDevice() from lib/onDevice.ts.
   const extractModel = getGenerativeModel(ai, {
     mode: InferenceMode.PREFER_ON_DEVICE,
     inCloudParams: {
